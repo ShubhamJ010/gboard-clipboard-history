@@ -22,10 +22,10 @@ val gboardClipboardHistoryPatch = resourcePatch(
 }
 
 context(context: ResourcePatchContext)
-private fun applyManifestModifications() = with(context) {
+private fun applyManifestModifications(): Unit = with(context) {
     document("AndroidManifest.xml").use { manifestDoc ->
         val manifest = manifestDoc.documentElement
-        val application = manifest.childElements("application").firstOrNull() ?: return@use
+        val application = manifest.childElements("application").firstOrNull() ?: return@use Unit
         val packageName = manifest.getAttribute("package")
 
         // 1. Declare Signature Permission for ContentProvider security
@@ -43,10 +43,10 @@ private fun applyManifestModifications() = with(context) {
             "provider",
             CLIPBOARD_PROVIDER_CLASS
         )
-        provider.setAttribute("android:authorities", CLIPBOARD_PROVIDER_AUTHORITY)
-        provider.setAttribute("android:exported", "true")
-        provider.setAttribute("android:multiprocess", "false")
-        provider.setAttribute("android:readPermission", CLIPBOARD_PERMISSION_NAME)
+        provider.setManifestAndroidAttribute("authorities", CLIPBOARD_PROVIDER_AUTHORITY)
+        provider.setManifestAndroidAttribute("exported", "true")
+        provider.setManifestAndroidAttribute("multiprocess", "false")
+        provider.setManifestAndroidAttribute("readPermission", CLIPBOARD_PERMISSION_NAME)
 
         // 3. Register Standalone Clipboard History Activity with Launcher Intent-Filter
         val activity = ensureManifestComponent(
@@ -55,33 +55,41 @@ private fun applyManifestModifications() = with(context) {
             "activity",
             CLIPBOARD_ACTIVITY_CLASS
         )
-        activity.setAttribute("android:exported", "true")
-        activity.setAttribute("android:label", "Gboard Clipboard History")
-        activity.setAttribute("android:theme", "@style/Theme.AppCompat.DayNight.NoActionBar")
-        activity.setAttribute(
-            "android:launchMode",
+        activity.setManifestAndroidAttribute("exported", "true")
+        activity.setManifestAndroidAttribute("label", "Gboard Clipboard History")
+        activity.setManifestAndroidAttribute("theme", "@style/Theme.AppCompat.DayNight.NoActionBar")
+        activity.setManifestAndroidAttribute(
+            "launchMode",
             if (packageName == "com.google.android.inputmethod.latin") "singleTop" else "singleInstance"
         )
 
-        val intentFilter = ensureElement(manifestDoc, activity, "intent-filter")
-        ensureAction(manifestDoc, intentFilter, "android.intent.action.MAIN")
-        ensureCategory(manifestDoc, intentFilter, "android.intent.category.LAUNCHER")
+        ensureManifestIntentFilter(
+            manifestDoc,
+            activity,
+            "android.intent.action.MAIN",
+            "android.intent.category.LAUNCHER"
+        )
+        Unit
     }
 }
 
 context(context: ResourcePatchContext)
-private fun applyClipboardSettingsXmlModifications() = with(context) {
-    document("res/xml/setting_clipboard.xml").use { settingsDoc ->
-        val root = settingsDoc.documentElement
-        val preferenceCategory = root.childElements("PreferenceCategory").firstOrNull() ?: root
+private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
+    try {
+        document("res/xml/setting_clipboard.xml").use { settingsDoc ->
+            val root = settingsDoc.documentElement
+            val preferenceCategory = root.childElements("PreferenceCategory").firstOrNull() ?: root
 
-        val preference = ensureElement(settingsDoc, preferenceCategory, "Preference")
-        preference.setAttribute("android:key", "pref_key_clipboard_history_manager")
-        preference.setAttribute("android:title", "Clipboard History Manager")
-        preference.setAttribute("android:summary", "Search, export, and manage persistent Gboard clips")
+            val preference = settingsDoc.createElement("Preference").also(preferenceCategory::appendChild)
+            preference.setManifestAndroidAttribute("key", "pref_key_clipboard_history_manager")
+            preference.setManifestAndroidAttribute("title", "Clipboard History Manager")
+            preference.setManifestAndroidAttribute("summary", "Search, export, and manage persistent Gboard clips")
 
-        val intent = ensureElement(settingsDoc, preference, "intent")
-        intent.setAttribute("android:targetClass", CLIPBOARD_ACTIVITY_CLASS)
-        intent.setAttribute("android:targetPackage", "@package")
+            val intent = settingsDoc.createElement("intent").also(preference::appendChild)
+            intent.setManifestAndroidAttribute("targetClass", CLIPBOARD_ACTIVITY_CLASS)
+            intent.setManifestAndroidAttribute("targetPackage", "@package")
+            Unit
+        }
+    } catch (_: Throwable) {
     }
 }
