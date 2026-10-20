@@ -30,10 +30,15 @@ internal object Constants {
             "f0fd6c5b410f25cb25c3b53346c8972fae30f8ee7411df910480ad6b2d60db83",
         ),
         targets = listOf(
+            AppTarget(version = "18.4.1.985164140-release-arm64-v8a", isExperimental = false),
+            AppTarget(version = "18.3.1.977415014-release-arm64-v8a", isExperimental = false),
+            AppTarget(version = "18.3.1.977415014-beta-arm64-v8a", isExperimental = false),
+            AppTarget(version = "18.0.3.954559732-release-arm64-v8a", isExperimental = false),
             AppTarget(version = "18.4.1", isExperimental = false),
             AppTarget(version = "18.3.1", isExperimental = false),
             AppTarget(version = "18.2.0", isExperimental = false),
             AppTarget(version = "18.1.0", isExperimental = false),
+            AppTarget(version = "18.0.3", isExperimental = false),
             AppTarget(version = "18.0.0", isExperimental = false),
         ),
     )

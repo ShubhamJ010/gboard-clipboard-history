@@ -11,10 +11,15 @@
       "dependencies": [],
       "compatiblePackages": {
         "com.google.android.inputmethod.latin": [
+          "18.4.1.985164140-release-arm64-v8a",
+          "18.3.1.977415014-release-arm64-v8a",
+          "18.3.1.977415014-beta-arm64-v8a",
+          "18.0.3.954559732-release-arm64-v8a",
           "18.4.1",
           "18.3.1",
           "18.2.0",
           "18.1.0",
+          "18.0.3",
           "18.0.0"
         ]
       },
@@ -25,6 +30,22 @@
           "description": null,
           "appIconColor": 2718207,
           "targets": [
+            {
+              "version": "18.4.1.985164140-release-arm64-v8a",
+              "experimental": false
+            },
+            {
+              "version": "18.3.1.977415014-release-arm64-v8a",
+              "experimental": false
+            },
+            {
+              "version": "18.3.1.977415014-beta-arm64-v8a",
+              "experimental": false
+            },
+            {
+              "version": "18.0.3.954559732-release-arm64-v8a",
+              "experimental": false
+            },
             {
               "version": "18.4.1",
               "experimental": false
@@ -39,6 +60,10 @@
             },
             {
               "version": "18.1.0",
+              "experimental": false
+            },
+            {
+              "version": "18.0.3",
               "experimental": false
             },
             {
