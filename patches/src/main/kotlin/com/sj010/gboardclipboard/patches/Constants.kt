@@ -7,6 +7,8 @@ import app.morphe.patcher.patch.Compatibility
 internal object Constants {
     const val GBOARD_PACKAGE_NAME = "com.google.android.inputmethod.latin"
     const val PIXELBOARD_PACKAGE_NAME = "com.akshaykadam.pixelboard"
+    const val SJ010_GBOARD_PACKAGE_NAME = "com.sj010.gboard"
+    const val SJ010_PIXELBOARD_PACKAGE_NAME = "com.sj010.pixelboard"
     const val PATCH_AUTHOR = "sj010"
     const val PATCH_AUTHOR_URL = "https://github.com/sj010"
     const val PATCH_REPOSITORY_URL = "https://github.com/sj010/gboard-clipboard-history"
@@ -21,7 +23,7 @@ internal object Constants {
     const val CLIPBOARD_ACTIVITY_CLASS =
         "com.sj010.gboardclipboard.extension.GboardClipboardHistoryActivity"
 
-    private val TARGET_VERSIONS = listOf(
+    val TARGET_VERSIONS = listOf(
         AppTarget(version = "18.4.1.985164140-release-arm64-v8a", isExperimental = false),
         AppTarget(version = "18.3.1.977415014-release-arm64-v8a", isExperimental = false),
         AppTarget(version = "18.3.1.977415014-beta-arm64-v8a", isExperimental = false),
@@ -49,6 +51,22 @@ internal object Constants {
     val COMPATIBILITY_PIXELBOARD = Compatibility(
         name = "PixelBoard",
         packageName = PIXELBOARD_PACKAGE_NAME,
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x2979FF,
+        targets = TARGET_VERSIONS,
+    )
+
+    val COMPATIBILITY_SJ010_GBOARD = Compatibility(
+        name = "SJ Gboard",
+        packageName = SJ010_GBOARD_PACKAGE_NAME,
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x2979FF,
+        targets = TARGET_VERSIONS,
+    )
+
+    val COMPATIBILITY_SJ010_PIXELBOARD = Compatibility(
+        name = "SJ PixelBoard",
+        packageName = SJ010_PIXELBOARD_PACKAGE_NAME,
         apkFileType = ApkFileType.APK,
         appIconColor = 0x2979FF,
         targets = TARGET_VERSIONS,
