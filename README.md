@@ -1,98 +1,89 @@
 # Gboard Clipboard History
 
-A standalone, modular [Morphe](https://github.com/MorpheApp) patch that unlocks a full-featured Clipboard History manager directly in Google Gboard.
+A [Morphe](https://github.com/MorpheApp) patch that adds persistent clipboard history management to Google Gboard.
 
-Unlike multi-feature mod suites, **Gboard Clipboard History** is dedicated solely to clipboard history with zero bloat and no external mod dependencies.
+It runs as a standalone patch and does not require other keyboard modifications.
 
----
+## Features
 
-## 🌟 Key Features
+- **Launcher icon**: Opens the clipboard viewer directly from the app drawer without navigating through system or keyboard settings.
+- **In-app settings integration**: Adds a "Clipboard History Manager" entry to `Gboard Settings -> Clipboard`.
+- **Database reader**: Reads Gboard's internal SQLite database (`gboard_clipboard.db`, `clips` table) directly from the application process.
+- **Background backfill**: Captures clips copied while another keyboard or application had focus once Gboard regains active input status.
+- **Text export**: Exports stored history to a text file using Android Storage Access Framework.
+- **Sensitive field toggle**: Controls whether entries copied from password fields are stored or shown.
+- **ContentProvider API**: Exposes a read-only endpoint for automation tools, widgets, and companion apps.
 
-- 📱 **Dual UI Access**:
-  - **App Drawer Launcher Icon**: Direct home screen launcher icon (`Clipboard History`) to view, search, and manage clips without digging through settings.
-  - **In-Keyboard Settings**: Native entry in `Gboard Settings -> Clipboard -> Clipboard History Manager`.
-- 🔍 **Search & Quick Copy**: Instantly filter through copied text and tap any clip to copy it straight back into the active clipboard.
-- 💾 **Unlimited History & SQLite Reader**: Accesses Gboard's internal SQLite database (`gboard_clipboard.db` -> `clips` table) directly.
-- 🔄 **Cross-Keyboard Backfill**: Catches clips copied while other input methods or apps were active.
-- 📁 **SAF File Export**: Export full clipboard history to a `.txt` file using Android Storage Access Framework.
-- 🔒 **Privacy & Sensitive Clips**: Toggle visibility for passwords and sensitive input fields.
-- ⚡ **Companion App & Widget API**: Exported read-only `ContentProvider` allowing third-party tools, Tasker, KWGT, or desktop clipboard sync services to read history securely.
-
----
-
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 gboard-clipboard-history/
-├── extension/                     # Android Runtime Extension (.rve DEX)
+├── extension/                     # Android runtime extension (.rve DEX)
 │   └── src/main/java/com/sj010/gboardclipboard/extension/
-│       ├── GboardClipboardHistoryRepository.java   # SQLite database reader/writer
-│       ├── GboardClipboardHistorySettings.java     # Token & preference persistence
-│       ├── GboardClipboardHistoryProvider.java     # content:// ContentProvider API
-│       ├── GboardClipboardBackfill.java            # Primary clip backfill observer
-│       └── GboardClipboardHistoryActivity.java     # Clean Material UI Activity
-│   └── src/main/res/                               # Vector icons & strings
-├── patches/                       # Morphe Bytecode & Resource Patch Bundle
+│       ├── GboardClipboardHistoryRepository.java   # SQLite reader and writer
+│       ├── GboardClipboardHistorySettings.java     # Preference persistence
+│       ├── GboardClipboardHistoryProvider.java     # ContentProvider implementation
+│       ├── GboardClipboardBackfill.java            # Clipboard listener and backfill
+│       └── GboardClipboardHistoryActivity.java     # Management UI
+│   └── src/main/res/                               # Vector assets and strings
+├── patches/                       # Morphe bytecode and resource patch bundle
 │   └── src/main/kotlin/com/sj010/gboardclipboard/patches/
-│       ├── Constants.kt                            # Package names, targets & URIs
-│       ├── XmlManifestUtils.kt                     # DOM manipulation helpers
-│       ├── ClipboardCarrierPatch.kt                # Injects runtime extension DEX
-│       └── ClipboardHistoryPatch.kt                # Manifest & settings XML patch
-├── .github/workflows/build.yml    # Automated CI/CD release pipeline
-├── build.sh                       # Local build & patch runner
+│       ├── Constants.kt                            # Package names, targets, and URIs
+│       ├── XmlManifestUtils.kt                     # XML manipulation helpers
+│       ├── ClipboardCarrierPatch.kt                # Extension DEX injection
+│       └── ClipboardHistoryPatch.kt                # Manifest and layout injection
+├── .github/workflows/build.yml    # CI build workflow
+├── build.sh                       # Local build script
 ├── patches-bundle.json            # Morphe Manager repository metadata
-└── settings.gradle.kts            # Gradle settings & Morphe plugin setup
+└── settings.gradle.kts            # Gradle settings and plugin configuration
 ```
 
----
+## Building and Patching
 
-## 🚀 How to Build & Patch
+### With Morphe Manager (Android)
 
-### Method 1: Using Morphe Manager (Recommended)
-1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager) on your Android device.
-2. In Morphe Manager sources, add this repository URL or download the compiled `.mpp` patch file from GitHub Releases.
-3. Select your installed or downloaded stock Gboard APK.
-4. Apply the **Gboard Clipboard History** patch and install.
+1. Open Morphe Manager on your device.
+2. Add this repository URL to sources, or download the `.mpp` patch file from the Releases page.
+3. Select your installed or downloaded Gboard APK.
+4. Apply the patch and install the modified APK.
 
----
+### Command Line
 
-### Method 2: Command Line (Linux / macOS)
+Prerequisites: Java 21+ and a stock Gboard APK.
 
-1. **Prerequisites**: Java 21+ and a stock Gboard APK.
-2. Place your stock Gboard APK in `input/gboard.apk`.
-3. Run the automated patch script:
+1. Copy the target APK to `input/gboard.apk`.
+2. Run the patch script:
    ```bash
    ./build.sh
    ```
-4. Output will be generated at `output/GboardClipboard.apk`.
+3. The patched package will be written to `output/GboardClipboard.apk`.
 
-To recompile the patch bundle from source:
+To recompile the `.mpp` patch bundle from source:
 ```bash
 ./build.sh --rebuild
 ```
 
----
+## ContentProvider API
 
-## 🔌 Companion App Integration API
+External applications (widgets, automation tasks, desktop sync tools) can query history through Android's ContentProvider interface.
 
-External applications (widgets, automation tools, desktop sync) can query clipboard history via Android's `ContentProvider` mechanism:
+### Endpoints
 
-### Provider Details
-- **Authority**: `content://com.sj010.gboardclipboard.history`
-- **Endpoints**:
-  - `content://com.sj010.gboardclipboard.history/clips` (all history)
-  - `content://com.sj010.gboardclipboard.history/clips/{id}` (single clip)
-  - `content://com.sj010.gboardclipboard.history/primary` (system primary clip)
+- `content://com.sj010.gboardclipboard.history/clips` (all history)
+- `content://com.sj010.gboardclipboard.history/clips/{id}` (single entry)
+- `content://com.sj010.gboardclipboard.history/primary` (active system clipboard entry)
 
 ### Authentication
-External access is disabled by default. Enable it inside the **Clipboard History** settings screen. Once enabled, authenticate either via:
-1. **Signature Permission**: Declare `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY` if signed with the same key.
-2. **Access Token**: Pass the token as a query parameter:
-   ```
-   content://com.sj010.gboardclipboard.history/clips?token=YOUR_API_TOKEN
-   ```
 
-### Kotlin Example
+External access is disabled by default and must be toggled on in the Clipboard History settings. Callers can authenticate in two ways:
+
+1. **Signature permission**: Granted automatically if the calling app shares the same signing key:
+   `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY`
+2. **Access token**: Passed as a query parameter with the request:
+   `content://com.sj010.gboardclipboard.history/clips?token=YOUR_API_TOKEN`
+
+### Query Example (Kotlin)
+
 ```kotlin
 val uri = Uri.parse("content://com.sj010.gboardclipboard.history/clips?token=$userToken")
 val cursor = context.contentResolver.query(uri, null, null, null, null)
@@ -103,12 +94,11 @@ cursor?.use {
     while (it.moveToNext()) {
         val text = it.getString(textIdx)
         val timestamp = it.getLong(timeIdx)
-        println("Clip: $text (Copied at $timestamp)")
+        println("Clip: $text (Copied: $timestamp)")
     }
 }
 ```
 
----
+## License
 
-## 📄 License
 This project is licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE).
