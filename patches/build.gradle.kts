@@ -12,7 +12,7 @@ patches {
     }
 }
 
-val syncExtensionTask = project(":extension").tasks.named("syncExtension")
+val syncExtensionTask = project(":extensions:extension").tasks.named("syncExtension")
 
 tasks.named("processResources") {
     dependsOn(syncExtensionTask)

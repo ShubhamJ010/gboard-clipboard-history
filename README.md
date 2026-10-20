@@ -28,14 +28,15 @@ It runs as a standalone patch and does not require other keyboard modifications.
 
 ```
 gboard-clipboard-history/
-├── extension/                     # Android runtime extension (.rve DEX)
-│   └── src/main/java/com/sj010/gboardclipboard/extension/
-│       ├── GboardClipboardHistoryRepository.java   # SQLite reader and writer
-│       ├── GboardClipboardHistorySettings.java     # Preference persistence
-│       ├── GboardClipboardHistoryProvider.java     # ContentProvider implementation
-│       ├── GboardClipboardBackfill.java            # Clipboard listener and backfill
-│       └── GboardClipboardHistoryActivity.java     # Management UI
-│   └── src/main/res/                               # Vector assets and strings
+├── extensions/
+│   └── extension/                 # Android runtime extension (.rve DEX)
+│       └── src/main/java/com/sj010/gboardclipboard/extension/
+│           ├── GboardClipboardHistoryRepository.java   # SQLite reader and writer
+│           ├── GboardClipboardHistorySettings.java     # Preference persistence
+│           ├── GboardClipboardHistoryProvider.java     # ContentProvider implementation
+│           ├── GboardClipboardBackfill.java            # Clipboard listener and backfill
+│           └── GboardClipboardHistoryActivity.java     # Management UI
+│       └── src/main/res/                               # Vector assets and strings
 ├── patches/                       # Morphe bytecode and resource patch bundle
 │   └── src/main/kotlin/com/sj010/gboardclipboard/patches/
 │       ├── Constants.kt                            # Package names, targets, and URIs
