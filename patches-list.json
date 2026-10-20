@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "appNames": {
+    "com.google.android.inputmethod.latin": "Gboard"
+  },
+  "patches": [
+    {
+      "name": "Clipboard History",
+      "description": "Add standalone Gboard Clipboard History with exported ContentProvider, native settings entry, and app drawer launcher icon.",
+      "use": true,
+      "dependencies": [],
+      "compatiblePackages": {
+        "com.google.android.inputmethod.latin": [
+          "18.4.1",
+          "18.3.1",
+          "18.2.0",
+          "18.1.0",
+          "18.0.0"
+        ]
+      },
+      "compatibility": [
+        {
+          "name": "Gboard",
+          "packageName": "com.google.android.inputmethod.latin",
+          "description": null,
+          "appIconColor": 2718207,
+          "targets": [
+            {
+              "version": "18.4.1",
+              "experimental": false
+            },
+            {
+              "version": "18.3.1",
+              "experimental": false
+            },
+            {
+              "version": "18.2.0",
+              "experimental": false
+            },
+            {
+              "version": "18.1.0",
+              "experimental": false
+            },
+            {
+              "version": "18.0.0",
+              "experimental": false
+            }
+          ]
+        }
+      ],
+      "options": []
+    }
+  ]
+}
