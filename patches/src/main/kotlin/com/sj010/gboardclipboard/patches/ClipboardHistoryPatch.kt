@@ -2,13 +2,9 @@ package com.sj010.gboardclipboard.patches
 
 import app.morphe.patcher.patch.ResourcePatchContext
 import app.morphe.patcher.patch.resourcePatch
-import org.w3c.dom.Attr
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import org.w3c.dom.NodeList
-import java.io.File
 
-private const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
 private const val CLIPBOARD_ACTIVITY_CLASS =
     "com.sj010.gboardclipboard.extension.GboardClipboardHistoryActivity"
 private const val GBOARD_SETTINGS_ACTIVITY_CLASS =
@@ -27,10 +23,10 @@ val clipboardHistoryPatch = resourcePatch(
     description = "Provides persistent, unlimited clipboard history management integrated natively into Gboard settings.",
 ) {
     compatibleWith(
-        COMPATIBILITY_GBOARD,
-        COMPATIBILITY_PIXELBOARD,
-        COMPATIBILITY_SJ010_GBOARD,
-        COMPATIBILITY_SJ010_PIXELBOARD,
+        Constants.COMPATIBILITY_GBOARD,
+        Constants.COMPATIBILITY_PIXELBOARD,
+        Constants.COMPATIBILITY_SJ010_GBOARD,
+        Constants.COMPATIBILITY_SJ010_PIXELBOARD,
     )
 
     execute {
@@ -48,7 +44,7 @@ private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
         // Find or create GboardClipboardHistoryActivity declaration
         val activity = application.childElements("activity").firstOrNull {
             it.manifestAndroidAttribute("name") == CLIPBOARD_ACTIVITY_CLASS
-        } ?: doc.createElement("activity").also(application::appendChild)
+        } ?: doc.createElement("activity").also { application.appendChild(it) }
 
         activity.setManifestAndroidAttribute("name", CLIPBOARD_ACTIVITY_CLASS)
         activity.setManifestAndroidAttribute("label", "Clipboard History")
@@ -83,7 +79,7 @@ private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
 context(context: ResourcePatchContext)
 private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
     val packageName = try {
-        document("AndroidManifest.xml").use { it.documentElement.getAttribute("package") }
+        document("AndroidManifest.xml").use { it.documentElement.getAttribute("package") ?: "" }
     } catch (_: Throwable) {
         ""
     }
@@ -151,7 +147,7 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
             val existing = root.childElements().firstOrNull {
                 it.manifestAndroidAttribute("key") == CLIPBOARD_PREF_KEY
             }
-            val pref = existing ?: doc.createElement(HEADER_PREFERENCE_TAG).also(root::appendChild)
+            val pref = existing ?: doc.createElement(HEADER_PREFERENCE_TAG).also { root.appendChild(it) }
             pref.setManifestAndroidAttribute("persistent", "false")
             pref.setManifestAndroidAttribute("selectable", "true")
             pref.setManifestAndroidAttribute("key", CLIPBOARD_PREF_KEY)
@@ -160,7 +156,7 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
             pref.setManifestAndroidAttribute("icon", "@drawable/ic_clipboard_history_entry")
 
             val intent = pref.childElements("intent").firstOrNull()
-                ?: doc.createElement("intent").also(pref::appendChild)
+                ?: doc.createElement("intent").also { pref.appendChild(it) }
             intent.setManifestAndroidAttribute("action", "android.intent.action.MAIN")
             if (packageName.isNotBlank()) {
                 intent.setManifestAndroidAttribute("targetPackage", packageName)
@@ -209,35 +205,10 @@ private fun injectIntoSettingsRoot(doc: Document, packageName: String) {
     prefEntry.setManifestAndroidAttribute("icon", "@drawable/ic_clipboard_history_entry")
 
     val intent = prefEntry.childElements("intent").firstOrNull()
-        ?: doc.createElement("intent").also(prefEntry::appendChild)
+        ?: doc.createElement("intent").also { prefEntry.appendChild(it) }
     intent.setManifestAndroidAttribute("action", "android.intent.action.MAIN")
     if (packageName.isNotBlank()) {
         intent.setManifestAndroidAttribute("targetPackage", packageName)
     }
     intent.setManifestAndroidAttribute("targetClass", CLIPBOARD_ACTIVITY_CLASS)
-}
-
-private fun Element.childElements(tagName: String? = null): Sequence<Element> = sequence {
-    val children: NodeList = childNodes
-    for (i in 0 until children.length) {
-        val node = children.item(i)
-        if (node is Element && (tagName == null || node.tagName == tagName || node.localName == tagName)) {
-            yield(node)
-        }
-    }
-}
-
-private fun Element.manifestAndroidAttribute(name: String): String? {
-    val attr = getAttributeNodeNS(ANDROID_NS, name)
-        ?: getAttributeNode("android:$name")
-        ?: getAttributeNode(name)
-    return attr?.value
-}
-
-private fun Element.setManifestAndroidAttribute(name: String, value: String) {
-    if (hasAttributeNS(ANDROID_NS, name)) {
-        setAttributeNS(ANDROID_NS, "android:$name", value)
-    } else {
-        setAttribute("android:$name", value)
-    }
 }
