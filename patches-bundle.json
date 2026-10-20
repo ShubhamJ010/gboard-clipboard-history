@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
-  "created_at": "2026-10-21T00:00:00",
-  "description": "### Gboard Clipboard History (v1.0.0)\n\n- Direct SQLite reader for Gboard clips table (`gboard_clipboard.db`).\n- Launcher icon for direct access from app drawer.\n- Entry in Gboard Settings -> Clipboard.\n- Read-only ContentProvider endpoint (`content://com.sj010.gboardclipboard.history/clips`) with token and signature authentication.\n- Primary clip backfill when Gboard regains active keyboard focus.\n- Text file export and sensitive clip filtering.\n\nCompatible with Gboard v18.0.0 through v18.4.1+.",
-  "download_url": "https://raw.githubusercontent.com/sj010/gboard-clipboard-history/main/patches/GboardClipboardHistory.mpp",
+  "version": "0.0.1-alpha",
+  "created_at": "2026-10-20T22:42:00",
+  "description": "Standalone clipboard history manager for Gboard with search, export, launcher icon, and ContentProvider API.",
+  "download_url": "https://github.com/ShubhamJ010/gboard-clipboard-history/releases/download/0.0.1-alpha/patches-1.0.0.mpp",
   "signature_download_url": ""
 }
