@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-10-21T00:00:00",
+  "description": "### Gboard Clipboard History (v1.0.0)\n\n* **Unlimited History SQLite Reader**: Direct read/write to Gboard private `gboard_clipboard.db` database.\n* **Standalone App Drawer Launcher**: Direct home screen launcher icon to view, search, copy, and export clips without opening settings.\n* **In-Settings Navigation**: Seamless 'Clipboard History Manager' entry in Gboard's native Clipboard settings screen.\n* **Read-Only ContentProvider API**: Exported `content://com.sj010.gboardclipboard.history/clips` endpoint with signature permission and bearer token security for companion apps and widgets.\n* **Backfill Clipboard Sync**: Automatically catches clips copied while other input methods or apps were active.\n* **Export & Management**: One-tap clip copy, full history export to `.txt`, sensitive clip password protection toggle, and clear history action.\n\nCompatible with Gboard v18.0.0 through v18.4.1+.",
+  "download_url": "https://raw.githubusercontent.com/sj010/gboard-clipboard-history/main/patches/GboardClipboardHistory.mpp",
+  "signature_download_url": ""
+}

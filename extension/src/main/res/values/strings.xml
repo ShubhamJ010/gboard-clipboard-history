@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Clipboard History</string>
+    <string name="clipboard_history_title">Clipboard History</string>
+    <string name="clipboard_history_summary">View, search, and export captured clipboard clips</string>
+    <string name="pref_clipboard_history_title">Clipboard History Manager</string>
+    <string name="pref_clipboard_history_summary">Manage saved clips, export history, and configure API access</string>
+</resources>
