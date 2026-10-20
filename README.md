@@ -5,14 +5,48 @@ A [Morphe](https://github.com/MorpheApp) patch that adds persistent clipboard hi
 It runs as a standalone patch and does not require other keyboard modifications.
 
 <p align="center">
-  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases">
-    <img src="https://img.shields.io/badge/📥_Download_APK_(Clipboard_Edition)-v18.4.1_V7_(126_MB)-00C853?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download APK (Clipboard Edition)"/>
+  <a href="https://morphe.software/add-source?github=ShubhamJ010/gboard-clipboard-history&name=Gboard%20Clipboard%20History">
+    <img src="https://img.shields.io/badge/Add_to-Morphe-1E88E5?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Add to Morphe"/>
   </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases">
-    <img src="https://img.shields.io/badge/📦_Morphe_Patch_(.mpp)-v18.4.1_V7_(689_KB)-2979FF?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Morphe Patch (.mpp)"/>
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.1-alpha">
+    <img src="https://img.shields.io/badge/📦_Morphe_Patch_(.mpp)-v0.0.1--alpha_(676_KB)-2979FF?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Morphe Patch (.mpp)"/>
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.1-alpha">
+    <img src="https://img.shields.io/badge/📥_Release-0.0.1--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.1-alpha"/>
   </a>
 </p>
+
+## Import to Morphe Manager
+
+### One-Click Import (Android)
+
+Tap the button below or link on an Android device where Morphe Manager is installed:
+
+[![Add to Morphe](https://img.shields.io/badge/Add%20to-Morphe-1E88E5?style=for-the-badge&logo=android&logoColor=white)](https://morphe.software/add-source?github=ShubhamJ010/gboard-clipboard-history&name=Gboard%20Clipboard%20History)
+
+**Direct link:** [https://morphe.software/add-source?github=ShubhamJ010/gboard-clipboard-history&name=Gboard%20Clipboard%20History](https://morphe.software/add-source?github=ShubhamJ010/gboard-clipboard-history&name=Gboard%20Clipboard%20History)
+
+> [!NOTE]
+> If viewing on desktop, clicking the link displays a QR code to scan with your Android phone's camera.
+
+---
+
+### Manual Import
+
+If the link does not open Morphe Manager automatically:
+
+1. Open **Morphe Manager** on your Android device.
+2. Tap **Sources** in the navigation bar.
+3. Tap the **`+`** button (top right).
+4. In the **Remote** field, enter:
+   ```
+   github.com/ShubhamJ010/gboard-clipboard-history
+   ```
+5. Tap **Add**.
+
+---
 
 ## Features
 
@@ -54,71 +88,18 @@ gboard-clipboard-history/
 | Package | Format | Description |
 | :--- | :--- | :--- |
 | **Gboard Clipboard Edition APK** | Signed APK | Standalone patched keyboard package with clipboard history pre-integrated. |
-| **GboardClipboardHistory.mpp** | Morphe Patch | Patch bundle for use with Morphe Manager or CLI patcher. |
+| **patches-1.0.0.mpp** | Morphe Patch | Patch bundle for use with Morphe Manager or CLI patcher. |
 
-Download both files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases) page.
-
-## Building and Patching
-
-### With Morphe Manager (Android)
-
-1. Open Morphe Manager on your device.
-2. Add this repository URL to sources, or download the `.mpp` patch file from the Releases page.
-3. Select your installed or downloaded Gboard APK.
-4. Apply the patch and install the modified APK.
-
-### Command Line
-
-Prerequisites: Java 21+ and a stock Gboard APK.
-
-1. Copy the target APK to `input/gboard.apk`.
-2. Run the patch script:
-   ```bash
-   ./build.sh
-   ```
-3. The patched package will be written to `output/GboardClipboard.apk`.
-
-To recompile the `.mpp` patch bundle from source:
-```bash
-./build.sh --rebuild
-```
+Download both files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.1-alpha) page.
 
 ## ContentProvider API
 
-External applications (widgets, automation tasks, desktop sync tools) can query history through Android's ContentProvider interface.
+Other apps or automation scripts (Tasker, Termux, Automate) can read clipboard history via:
 
-### Endpoints
-
-- `content://com.sj010.gboardclipboard.history/clips` (all history)
-- `content://com.sj010.gboardclipboard.history/clips/{id}` (single entry)
-- `content://com.sj010.gboardclipboard.history/primary` (active system clipboard entry)
-
-### Authentication
-
-External access is disabled by default and must be toggled on in the Clipboard History settings. Callers can authenticate in two ways:
-
-1. **Signature permission**: Granted automatically if the calling app shares the same signing key:
-   `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY`
-2. **Access token**: Passed as a query parameter with the request:
-   `content://com.sj010.gboardclipboard.history/clips?token=YOUR_API_TOKEN`
-
-### Query Example (Kotlin)
-
-```kotlin
-val uri = Uri.parse("content://com.sj010.gboardclipboard.history/clips?token=$userToken")
-val cursor = context.contentResolver.query(uri, null, null, null, null)
-
-cursor?.use {
-    val textIdx = it.getColumnIndex("text")
-    val timeIdx = it.getColumnIndex("timestamp")
-    while (it.moveToNext()) {
-        val text = it.getString(textIdx)
-        val timestamp = it.getLong(timeIdx)
-        println("Clip: $text (Copied: $timestamp)")
-    }
-}
-```
+- **URI**: `content://com.sj010.gboardclipboard.history/clips`
+- **Permission**: `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY` (normal protection level)
+- **Columns**: `_id`, `text`, `timestamp`, `is_pinned`
 
 ## License
 
-This project is licensed under the [GNU General Public License v3.0 (GPLv3)](LICENSE).
+GPL-3.0
