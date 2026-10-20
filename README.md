@@ -4,6 +4,16 @@ A [Morphe](https://github.com/MorpheApp) patch that adds persistent clipboard hi
 
 It runs as a standalone patch and does not require other keyboard modifications.
 
+<p align="center">
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases">
+    <img src="https://img.shields.io/badge/📥_Download_APK_(Clipboard_Edition)-v18.4.1_V7_(126_MB)-00C853?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download APK (Clipboard Edition)"/>
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases">
+    <img src="https://img.shields.io/badge/📦_Morphe_Patch_(.mpp)-v18.4.1_V7_(689_KB)-2979FF?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Morphe Patch (.mpp)"/>
+  </a>
+</p>
+
 ## Features
 
 - **Launcher icon**: Opens the clipboard viewer directly from the app drawer without navigating through system or keyboard settings.
@@ -37,6 +47,15 @@ gboard-clipboard-history/
 ├── patches-bundle.json            # Morphe Manager repository metadata
 └── settings.gradle.kts            # Gradle settings and plugin configuration
 ```
+
+## Downloads
+
+| Package | Format | Description |
+| :--- | :--- | :--- |
+| **Gboard Clipboard Edition APK** | Signed APK | Standalone patched keyboard package with clipboard history pre-integrated. |
+| **GboardClipboardHistory.mpp** | Morphe Patch | Patch bundle for use with Morphe Manager or CLI patcher. |
+
+Download both files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases) page.
 
 ## Building and Patching
 
