@@ -1,5 +1,6 @@
 package com.sj010.gboardclipboard.patches
 
+import app.morphe.patcher.patch.ApkFileType
 import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
 
@@ -22,8 +23,12 @@ internal object Constants {
     val COMPATIBILITY_GBOARD = Compatibility(
         name = "Gboard",
         packageName = GBOARD_PACKAGE_NAME,
-        apkFileType = "APK",
+        apkFileType = ApkFileType.APK,
         appIconColor = 0x2979FF,
+        signatures = setOf(
+            "7ce83c1b71f3d572fed04c8d40c5cb10ff75e6d87d9df6fbd53f0468c2905053",
+            "f0fd6c5b410f25cb25c3b53346c8972fae30f8ee7411df910480ad6b2d60db83",
+        ),
         targets = listOf(
             AppTarget(version = "18.4.1", isExperimental = false),
             AppTarget(version = "18.3.1", isExperimental = false),
