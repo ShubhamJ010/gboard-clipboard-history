@@ -12,15 +12,6 @@ patches {
     }
 }
 
-val syncExtensionTask = project(":extensions:extension").tasks.named("syncExtension")
-
-tasks.named("processResources") {
-    dependsOn(syncExtensionTask)
-    from(syncExtensionTask.map { it.outputs.files.singleFile }) {
-        into("extensions")
-    }
-}
-
 kotlin {
     compilerOptions {
         freeCompilerArgs.add("-Xcontext-parameters")
