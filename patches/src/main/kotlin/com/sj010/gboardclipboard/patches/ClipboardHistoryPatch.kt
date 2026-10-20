@@ -7,12 +7,14 @@ import com.sj010.gboardclipboard.patches.Constants.CLIPBOARD_PERMISSION_NAME
 import com.sj010.gboardclipboard.patches.Constants.CLIPBOARD_PROVIDER_AUTHORITY
 import com.sj010.gboardclipboard.patches.Constants.CLIPBOARD_PROVIDER_CLASS
 import com.sj010.gboardclipboard.patches.Constants.COMPATIBILITY_GBOARD
+import com.sj010.gboardclipboard.patches.Constants.COMPATIBILITY_PIXELBOARD
 
 val gboardClipboardHistoryPatch = resourcePatch(
     name = "Clipboard History",
     description = "Add standalone Gboard Clipboard History with exported ContentProvider, native settings entry, and app drawer launcher icon.",
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)
+    compatibleWith(COMPATIBILITY_PIXELBOARD)
     dependsOn(gboardClipboardCarrierPatch)
 
     finalize {
