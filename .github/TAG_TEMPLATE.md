@@ -58,8 +58,8 @@ gh release create "${VERSION}" \
 
 ## Pre-Release Verification Checklist
 
-- [ ] `./build-local.sh --rebuild-extension` builds `patches/GboardClipboardHistory.mpp` without errors.
-- [ ] `./build-local.sh --patch <stock.apk>` builds functional `output/Gboard-com.sj010.gboard.apk`.
+- [ ] `./scripts/build-mpp.sh --rebuild-extension` builds `patches/GboardClipboardHistory.mpp` without errors.
+- [ ] `./scripts/build-gboard-clipboard.sh` builds functional `output/Gboard-com.sj010.gboard.apk`.
 - [ ] Tested on target device:
   - [ ] App installs and enables as primary IME.
   - [ ] Setting entry is strictly inside `Gboard Settings -> Clipboard`.

@@ -17,7 +17,7 @@
 - [ ] `patches` (Kotlin Morphe patches: carrier, history, sync, package rename)
 - [ ] `settings.xml` / `setting_clipboard.xml` (Gboard preference hierarchy)
 - [ ] `patches-bundle.json` / `patches-list.json` (Morphe repository metadata)
-- [ ] Build & CI scripts (`build-local.sh`, `build.sh`, `.github/workflows/build.yml`)
+- [ ] Build & CI scripts (`scripts/build-mpp.sh`, `scripts/build-gradle.sh`, `scripts/build-all.sh`, `.github/workflows/build.yml`)
 
 ## On-Device Testing & Verification
 
@@ -25,7 +25,7 @@
 - **Android Version**: 
 - **Gboard Base Version**: 
 - **Tested Scenarios**:
-  - [ ] Standalone patch compilation (`./build-local.sh`) produces clean `.mpp`
+  - [ ] Standalone patch compilation (`./scripts/build-mpp.sh`) produces clean `.mpp`
   - [ ] Stock APK patching and signing produces functional `.apk`
   - [ ] App installs and runs as active IME without crash
   - [ ] Clipboard entry appears under `Gboard Settings -> Clipboard` (and NOT in root settings)

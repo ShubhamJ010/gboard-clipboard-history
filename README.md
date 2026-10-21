@@ -83,32 +83,84 @@ gboard-clipboard-history/
 │       ├── GboardClipboardSyncPatch.kt             # onStartInputView foreground hook
 │       └── GboardPackageRenamePatch.kt             # Package rename to com.sj010.gboard
 │   └── src/main/resources/                         # patches-list.json / patches-bundle.json
+├── scripts/                       # All build / install scripts
+│   ├── lib/common.sh                              # Shared tool, input and patcher helpers
+│   ├── build-mpp.sh                               # Build patches/GboardClipboardHistory.mpp
+│   ├── build-gradle.sh                            # Gradle build of the bundle (needs GITHUB_TOKEN)
+│   ├── build-gboard-clipboard.sh                  # App 1: Gboard + Clipboard History
+│   ├── build-gboard-clipboard-pixelboard.sh       # App 2: Gboard + PixelBoard + Clipboard History
+│   ├── build-pixelboard-clipboard.sh              # App 3: released PixelBoard + Clipboard History
+│   ├── build-all.sh                               # Build the bundle and all three APKs
+│   └── install.sh                                 # Install a built APK on a device
+├── input/                         # Build inputs (git ignored, auto downloaded)
+│   ├── gboard-merged.apk                          # Gboard v18.4.1 base
+│   ├── patches-1.2.0.mpp                          # PixelBoard patch bundle
+│   └── PixelBoard-v18.4.1-Stable-V7.apk           # Latest released PixelBoard APK
 ├── .github/workflows/build.yml    # CI build workflow
-├── build.sh                       # Local build script (requires Morphe Gradle plugin)
-├── build-local.sh                 # Credential free local build & patch script
 ├── patches-bundle.json            # Morphe Manager repository metadata
 └── settings.gradle.kts            # Gradle settings and plugin configuration
 ```
 
 ## Building
 
-### `build-local.sh` (no GitHub token required)
+All build logic lives in `scripts/`. Every script is self contained and can be run from the
+repository root.
 
-The Gradle build resolves the `app.morphe.patches` plugin from GitHub Packages and therefore
-needs a `GITHUB_TOKEN`. `build-local.sh` reproduces the same `.mpp` layout with local tooling
-only (`kotlinc` + `d8` + the Morphe patcher jar from the sibling `PixelBoard` checkout):
-
-```bash
-./build-local.sh                                   # build patches/GboardClipboardHistory.mpp
-./build-local.sh --patch /path/to/gboard.apk       # build + patch -> output/Gboard-com.sj010.gboard.apk
-./build-local.sh --rebuild-extension --patch ...   # also rebuild the runtime extension DEX
-```
-
-### `build.sh` / Gradle
+### Patch bundle
 
 ```bash
-./gradlew :patches:buildAndroid -Pgpr.user=<user> -Pgpr.key=<token>
+./scripts/build-mpp.sh                                  # credential free: kotlinc + d8 + Morphe patcher
+./scripts/build-mpp.sh --rebuild-extension              # also rebuild the runtime extension DEX
+./scripts/build-gradle.sh                               # Gradle build (needs GITHUB_TOKEN)
 ```
+
+Output: `patches/GboardClipboardHistory.mpp`.
+
+### The three patched APKs
+
+```bash
+./scripts/build-all.sh                                  # bundle + all three APKs
+```
+
+| Script | Input | Output | Package |
+| :--- | :--- | :--- | :--- |
+| `build-gboard-clipboard.sh` | Gboard base | `output/Gboard-com.sj010.gboard.apk` | `com.sj010.gboard` |
+| `build-gboard-clipboard-pixelboard.sh` | Gboard base + PixelBoard `.mpp` | `output/Gboard-PixelBoard-akshaykadam.apk` | `com.akshaykadam.pixelboard` |
+| `build-pixelboard-clipboard.sh` | released PixelBoard APK | `output/PixelBoard-clipboard-sj010.apk` | `com.akshaykadam.pixelboard` |
+
+### Build inputs
+
+Inputs live in `input/` (git ignored, they are too large for GitHub). The scripts download what
+is missing:
+
+| Input | Source |
+| :--- | :--- |
+| `input/gboard-merged.apk` | Gboard v18.4.1 base. Provide it manually, or drop the raw splits into `input/splits/` and they get merged with APKEditor. Override with `GBOARD_APK=<path>`. |
+| `input/patches-1.2.0.mpp` | PixelBoard patch bundle, downloaded from the [PixelBoard](https://github.com/Akshayykadam/PixelBoard) repository. |
+| `input/PixelBoard-v18.4.1-Stable-V7.apk` | Latest released PixelBoard APK, downloaded from the PixelBoard releases. |
+
+Tooling is resolved automatically: Java 21+, `kotlinc`, `d8`, `android.jar`, `APKEditor.jar` and
+the Morphe patcher jar (downloaded from the PixelBoard repository when the sibling checkout is
+missing).
+
+### Signing
+
+`SIGNING_KEY` selects the keystore:
+
+| Value | Keystore | Certificate |
+| :--- | :--- | :--- |
+| `pixelboard` (default) | sibling `PixelBoard/tools/patcher-data/pixelboard.keystore` | `CN=PixelBoard` – matches builds installed earlier |
+| `clipboard` | `tools/patcher-data/clipboard.keystore` | `CN=sj010` – generated on first use |
+
+### Install
+
+```bash
+./scripts/install.sh output/Gboard-com.sj010.gboard.apk
+./scripts/install.sh output/Gboard-PixelBoard-akshaykadam.apk --uninstall
+```
+
+`--uninstall` removes the previous package first, which is required when the signing
+certificate differs (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
 
 ## Downloads
 
