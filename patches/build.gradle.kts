@@ -1,14 +1,30 @@
 group = "com.sj010.gboardclipboard"
 
+// The about block and the shell build (scripts/build-mpp.sh) must describe the
+// bundle the same way, so both read patches/about.properties. The literal
+// fallbacks keep the build working when the file is missing.
+val aboutProperties = java.util.Properties().apply {
+    val aboutFile = file("about.properties")
+    if (aboutFile.exists()) {
+        aboutFile.inputStream().use { load(it) }
+    }
+}
+
+fun aboutValue(key: String, fallback: String): String =
+    aboutProperties.getProperty(key)?.takeIf { it.isNotBlank() } ?: fallback
+
 patches {
     about {
-        name = "Gboard Clipboard History"
-        description = "Standalone clipboard history manager for Gboard with search, export, launcher icon, and ContentProvider API."
-        source = "https://github.com/sj010/gboard-clipboard-history"
-        author = "sj010"
-        contact = "https://github.com/sj010/gboard-clipboard-history/issues"
-        website = "https://github.com/sj010/gboard-clipboard-history"
-        license = "GPLv3"
+        name = aboutValue("name", "Gboard Clipboard History")
+        description = aboutValue(
+            "description",
+            "Standalone clipboard history manager for Gboard with text export and a read-only ContentProvider API.",
+        )
+        source = aboutValue("source", "https://github.com/ShubhamJ010/gboard-clipboard-history")
+        author = aboutValue("author", "sj010")
+        contact = aboutValue("contact", "https://github.com/ShubhamJ010/gboard-clipboard-history/issues")
+        website = aboutValue("website", "https://github.com/ShubhamJ010/gboard-clipboard-history")
+        license = aboutValue("license", "GPLv3")
     }
 }
 

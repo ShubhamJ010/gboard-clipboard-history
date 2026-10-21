@@ -188,25 +188,6 @@ public final class GboardClipboardHistoryRepository {
         }
     }
 
-    public static long insertClip(Context context, String text, long timestamp, boolean sensitive) {
-        if (context == null || text == null || text.isEmpty()) {
-            return -1L;
-        }
-        SQLiteDatabase database = openClipboardDatabase(context, true);
-        if (database == null) {
-            return -1L;
-        }
-        try {
-            Set<String> availableColumns = resolveAvailableColumns(database);
-            return insertRow(database, availableColumns, text, timestamp, sensitive);
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed inserting clipboard entry", t);
-            return -1L;
-        } finally {
-            closeQuietly(database);
-        }
-    }
-
     public static long insertClipIfAbsent(Context context, String text, long timestamp,
             boolean sensitive, int recentLimit) {
         if (context == null || text == null || text.isEmpty()) {

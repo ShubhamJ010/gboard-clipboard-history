@@ -1230,7 +1230,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
 
     private static final class Palette {
         final int windowBackground;
-        final int surface;
         final int surfaceAlt;
         final int surfaceStroke;
         final int infoContainer;
@@ -1241,11 +1240,10 @@ public final class GboardClipboardHistoryActivity extends Activity {
         final int accent;
         final int pressedOverlay;
 
-        Palette(int windowBackground, int surface, int surfaceAlt, int surfaceStroke,
+        Palette(int windowBackground, int surfaceAlt, int surfaceStroke,
                 int infoContainer, int warningContainer, int textPrimary,
                 int textSecondary, int textDisabled, int accent, int pressedOverlay) {
             this.windowBackground = windowBackground;
-            this.surface = surface;
             this.surfaceAlt = surfaceAlt;
             this.surfaceStroke = surfaceStroke;
             this.infoContainer = infoContainer;
@@ -1264,7 +1262,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
             if (context != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 try {
                     int windowBackground;
-                    int surface;
                     int surfaceAlt;
                     int surfaceStroke;
                     int infoContainer;
@@ -1277,7 +1274,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
 
                     if (nightMode) {
                         windowBackground = context.getColor(android.R.color.system_neutral1_900);
-                        surface = context.getColor(android.R.color.system_neutral1_900);
                         surfaceAlt = context.getColor(android.R.color.system_neutral1_800);
                         surfaceStroke = blendAlpha(context.getColor(android.R.color.system_neutral2_700), 0.35f);
                         accent = context.getColor(android.R.color.system_accent1_200);
@@ -1291,7 +1287,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
                         pressedOverlay = blendAlpha(accent, 0.15f);
                     } else {
                         windowBackground = context.getColor(android.R.color.system_neutral1_50);
-                        surface = Color.WHITE;
                         surfaceAlt = Color.WHITE;
                         surfaceStroke = blendAlpha(context.getColor(android.R.color.system_neutral2_200), 0.5f);
                         accent = context.getColor(android.R.color.system_accent1_600);
@@ -1306,7 +1301,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
                     }
 
                     return new Palette(
-                            windowBackground, surface, surfaceAlt, surfaceStroke,
+                            windowBackground, surfaceAlt, surfaceStroke,
                             infoContainer, warningContainer, textPrimary, textSecondary,
                             textDisabled, accent, pressedOverlay);
                 } catch (Throwable ignored) {
@@ -1327,7 +1322,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
 
                     return new Palette(
                             themeBg,
-                            nightMode ? themeBg : Color.WHITE,
                             nightMode ? Color.parseColor("#2B243B") : Color.WHITE,
                             nightMode ? Color.parseColor("#1FFFFFFF") : Color.parseColor("#00000000"),
                             nightMode ? Color.parseColor("#381E72") : Color.parseColor("#EADDFF"),
@@ -1344,7 +1338,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
             if (nightMode) {
                 return new Palette(
                         Color.parseColor("#1D192B"),
-                        Color.parseColor("#1D192B"),
                         Color.parseColor("#2B243B"),
                         Color.parseColor("#1FFFFFFF"),
                         Color.parseColor("#381E72"),
@@ -1357,7 +1350,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
             }
             return new Palette(
                     Color.parseColor("#FEF7FF"),
-                    Color.WHITE,
                     Color.WHITE,
                     Color.parseColor("#00000000"),
                     Color.parseColor("#EADDFF"),

@@ -20,8 +20,8 @@ import java.util.List;
  */
 public final class GboardClipboardHistoryProvider extends ContentProvider {
 
-    public static final String AUTHORITY = "com.sj010.gboardclipboard.history";
-    public static final String PATH_CLIPS = "clips";    public static final String PATH_PRIMARY = "primary";
+    public static final String PATH_CLIPS = "clips";
+    public static final String PATH_PRIMARY = "primary";
     public static final String QUERY_PARAM_TOKEN = "token";
 
     public static final String MIME_TYPE_CLIPS_DIR = "vnd.android.cursor.dir/clips";

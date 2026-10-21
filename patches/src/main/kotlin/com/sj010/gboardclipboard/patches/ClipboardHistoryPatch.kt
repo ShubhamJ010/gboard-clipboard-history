@@ -5,15 +5,6 @@ import app.morphe.patcher.patch.resourcePatch
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 
-private const val CLIPBOARD_ACTIVITY_CLASS =
-    "com.sj010.gboardclipboard.extension.GboardClipboardHistoryActivity"
-private const val CLIPBOARD_PROVIDER_CLASS =
-    "com.sj010.gboardclipboard.extension.GboardClipboardHistoryProvider"
-private const val PRIMARY_PACKAGE_NAME = "com.sj010.gboard"
-private const val DEFAULT_CLIPBOARD_PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history"
-private const val DEFAULT_CLIPBOARD_PERMISSION_NAME =
-    "com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY"
-private const val PERMISSION_NAME_SUFFIX = ".permission.READ_CLIPBOARD_HISTORY"
 private const val GBOARD_SETTINGS_ACTIVITY_CLASS =
     "com.google.android.apps.inputmethod.latin.preference.SettingsActivity"
 private const val HEADER_PREFERENCE_TAG =
@@ -24,26 +15,6 @@ private val GBOARD_SETTINGS_PATHS = listOf(
     "res/xml/settings.xml",
     "res/xml/settings_legacy.xml",
 )
-
-/**
- * The provider authority and the signature permission live in global namespaces.
- * Two patched keyboards installed side by side would clash on them, so every host
- * package other than the reference build gets its own scoped variant. The
- * reference build keeps the documented names.
- */
-private fun providerAuthorityFor(packageName: String): String =
-    if (packageName.isBlank() || packageName == PRIMARY_PACKAGE_NAME) {
-        DEFAULT_CLIPBOARD_PROVIDER_AUTHORITY
-    } else {
-        "$packageName.gboardclipboard.history"
-    }
-
-private fun permissionNameFor(packageName: String): String =
-    if (packageName.isBlank() || packageName == PRIMARY_PACKAGE_NAME) {
-        DEFAULT_CLIPBOARD_PERMISSION_NAME
-    } else {
-        "$packageName$PERMISSION_NAME_SUFFIX"
-    }
 
 val clipboardHistoryPatch = resourcePatch(
     name = "Gboard Clipboard History",
@@ -78,15 +49,15 @@ private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
         val manifest = doc.documentElement
         val application = manifest.childElements("application").firstOrNull() ?: return@use
         val packageName = manifest.getAttribute("package") ?: ""
-        val providerAuthority = providerAuthorityFor(packageName)
-        val permissionName = permissionNameFor(packageName)
+        val providerAuthority = Constants.providerAuthorityFor(packageName)
+        val permissionName = Constants.permissionNameFor(packageName)
 
         // Find or create GboardClipboardHistoryActivity declaration
         val activity = application.childElements("activity").firstOrNull {
-            it.manifestAndroidAttribute("name") == CLIPBOARD_ACTIVITY_CLASS
+            it.manifestAndroidAttribute("name") == Constants.CLIPBOARD_ACTIVITY_CLASS
         } ?: doc.createElement("activity").also { application.appendChild(it) }
 
-        activity.setManifestAndroidAttribute("name", CLIPBOARD_ACTIVITY_CLASS)
+        activity.setManifestAndroidAttribute("name", Constants.CLIPBOARD_ACTIVITY_CLASS)
         activity.setManifestAndroidAttribute("label", "Clipboard History")
         // Integrate into Gboard: Not exported outside app, no launcher entry
         activity.setManifestAndroidAttribute("exported", "false")
@@ -117,7 +88,7 @@ private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
         // keyboards can be installed side by side.
         removeStaleClipboardPermissions(doc, manifest, permissionName)
         ensureManifestPermission(doc, manifest, permissionName)
-        val provider = ensureManifestComponent(doc, application, "provider", CLIPBOARD_PROVIDER_CLASS)
+        val provider = ensureManifestComponent(doc, application, "provider", Constants.CLIPBOARD_PROVIDER_CLASS)
         provider.setManifestAndroidAttribute("authorities", providerAuthority)
         provider.setManifestAndroidAttribute("exported", "true")
         provider.setManifestAndroidAttribute("grantUriPermissions", "false")
@@ -138,7 +109,7 @@ private fun removeStaleClipboardPermissions(
 ): Unit = with(context) {
     manifest.childElements("permission").filter { permission ->
         val name = permission.manifestAndroidAttribute("name") ?: return@filter false
-        name != keepPermissionName && name.endsWith(PERMISSION_NAME_SUFFIX)
+        name != keepPermissionName && name.endsWith(Constants.CLIPBOARD_PERMISSION_NAME_SUFFIX)
     }.toList().forEach { permission ->
         permission.parentNode?.removeChild(permission)
     }
@@ -167,7 +138,7 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
                     if (endIdx >= 0) {
                         text = text.substring(0, endIdx) +
                             "    <string name=\"gboard_clipboard_history_title\">Clipboard History</string>\n" +
-                            "    <string name=\"gboard_clipboard_history_summary\">Search, export, and manage persistent clips</string>\n" +
+                            "    <string name=\"gboard_clipboard_history_summary\">View, export, and manage persistent clips</string>\n" +
                             text.substring(endIdx)
                         file.writeText(text)
                     }
@@ -224,7 +195,7 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
             if (packageName.isNotBlank()) {
                 intent.setManifestAndroidAttribute("targetPackage", packageName)
             }
-            intent.setManifestAndroidAttribute("targetClass", CLIPBOARD_ACTIVITY_CLASS)
+            intent.setManifestAndroidAttribute("targetClass", Constants.CLIPBOARD_ACTIVITY_CLASS)
             Unit
         }
     } catch (_: Throwable) {
@@ -287,7 +258,7 @@ private fun enforceIntentTargetPackage(path: String, packageName: String): Unit 
         if (!file.exists()) return@with
         val original = file.readText()
         val intentRegex = Regex(
-            """<intent\b[^>]*targetClass="${Regex.escape(CLIPBOARD_ACTIVITY_CLASS)}"[^>]*/>""",
+            """<intent\b[^>]*targetClass="${Regex.escape(Constants.CLIPBOARD_ACTIVITY_CLASS)}"[^>]*/>""",
         )
         val updated = intentRegex.replace(original) { match ->
             match.value.replace(

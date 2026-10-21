@@ -60,28 +60,3 @@ internal fun ensureManifestPermission(
     permission.setManifestAndroidAttribute("name", permissionName)
     permission.setManifestAndroidAttribute("protectionLevel", protectionLevel)
 }
-
-internal fun ensureManifestIntentFilter(
-    document: Document,
-    component: Element,
-    actionName: String,
-    categoryName: String? = null,
-) {
-    val intentFilter = component.childElements("intent-filter").firstOrNull {
-        it.childElements("action").any { action ->
-            action.manifestAndroidAttribute("name") == actionName
-        }
-    } ?: document.createElement("intent-filter").also(component::appendChild)
-
-    val action = intentFilter.childElements("action").firstOrNull {
-        it.manifestAndroidAttribute("name") == actionName
-    } ?: document.createElement("action").also(intentFilter::appendChild)
-    action.setManifestAndroidAttribute("name", actionName)
-
-    if (categoryName != null) {
-        val category = intentFilter.childElements("category").firstOrNull {
-            it.manifestAndroidAttribute("name") == categoryName
-        } ?: document.createElement("category").also(intentFilter::appendChild)
-        category.setManifestAndroidAttribute("name", categoryName)
-    }
-}

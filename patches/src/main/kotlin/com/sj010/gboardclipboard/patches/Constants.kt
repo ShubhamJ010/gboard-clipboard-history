@@ -4,24 +4,51 @@ import app.morphe.patcher.patch.ApkFileType
 import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
 
+/**
+ * Single source for every name that more than one patch needs.
+ *
+ * The provider authority and the signature permission live in global namespaces, so the
+ * reference build keeps the documented names and every other host package gets a scoped
+ * variant derived from [RENAMED_PACKAGE_NAME].
+ */
 internal object Constants {
     const val GBOARD_PACKAGE_NAME = "com.google.android.inputmethod.latin"
     const val PIXELBOARD_PACKAGE_NAME = "com.akshaykadam.pixelboard"
-    const val SJ010_GBOARD_PACKAGE_NAME = "com.sj010.gboard"
-    const val SJ010_PIXELBOARD_PACKAGE_NAME = "com.sj010.pixelboard"
-    const val PATCH_AUTHOR = "sj010"
-    const val PATCH_AUTHOR_URL = "https://github.com/sj010"
-    const val PATCH_REPOSITORY_URL = "https://github.com/sj010/gboard-clipboard-history"
+    const val RENAMED_PACKAGE_NAME = "com.sj010.gboard"
+
     const val PATCH_VERSION = "0.0.5-alpha"
 
+    const val CLIPBOARD_PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history"
     const val CLIPBOARD_PERMISSION_NAME =
         "com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY"
+    const val CLIPBOARD_PERMISSION_NAME_SUFFIX = ".permission.READ_CLIPBOARD_HISTORY"
     const val CLIPBOARD_PROVIDER_CLASS =
         "com.sj010.gboardclipboard.extension.GboardClipboardHistoryProvider"
-    const val CLIPBOARD_PROVIDER_AUTHORITY =
-        "com.sj010.gboardclipboard.history"
     const val CLIPBOARD_ACTIVITY_CLASS =
         "com.sj010.gboardclipboard.extension.GboardClipboardHistoryActivity"
+
+    /**
+     * Authority of the clipboard history provider for a given host package.
+     *
+     * Two patched keyboards installed side by side would clash on the global authority
+     * namespace, so every host package other than the reference build gets its own.
+     */
+    fun providerAuthorityFor(packageName: String): String =
+        if (packageName.isBlank() || packageName == RENAMED_PACKAGE_NAME) {
+            CLIPBOARD_PROVIDER_AUTHORITY
+        } else {
+            "$packageName.gboardclipboard.history"
+        }
+
+    /**
+     * Signature permission of the clipboard history provider for a given host package.
+     */
+    fun permissionNameFor(packageName: String): String =
+        if (packageName.isBlank() || packageName == RENAMED_PACKAGE_NAME) {
+            CLIPBOARD_PERMISSION_NAME
+        } else {
+            "$packageName$CLIPBOARD_PERMISSION_NAME_SUFFIX"
+        }
 
     val TARGET_VERSIONS = listOf(
         AppTarget(version = "18.4.1.985164140-release-arm64-v8a", isExperimental = false),

@@ -2,17 +2,12 @@ package com.sj010.gboardclipboard.patches
 
 import app.morphe.patcher.patch.ResourcePatchContext
 import app.morphe.patcher.patch.resourcePatch
-import org.w3c.dom.Attr
-import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 import java.io.File
 
-private const val GBOARD_PACKAGE_NAME = "com.google.android.inputmethod.latin"
-private const val RENAMED_PACKAGE_NAME = "com.sj010.gboard"
-private const val CLIPBOARD_PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history"
-private const val CLIPBOARD_PERMISSION_NAME =
-    "com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY"
+private const val GBOARD_PACKAGE_NAME = Constants.GBOARD_PACKAGE_NAME
+private const val RENAMED_PACKAGE_NAME = Constants.RENAMED_PACKAGE_NAME
 
 /**
  * Preference XML files that may embed `<intent>` elements pointing back at the host package.
@@ -208,11 +203,11 @@ private fun applyClipboardProviderIdentity(): Unit = with(context) {
 
     // 2. Point the clipboard history provider at the documented authority.
     val authorityRegex = Regex("""android:authorities="[^"]*\.gboardclipboard\.history"""")
-    text = authorityRegex.replace(text, """android:authorities="$CLIPBOARD_PROVIDER_AUTHORITY"""")
+    text = authorityRegex.replace(text, """android:authorities="${Constants.CLIPBOARD_PROVIDER_AUTHORITY}"""")
 
     // 3. Declare the documented signature permission again.
-    if (!text.contains(CLIPBOARD_PERMISSION_NAME)) {
-        val declaration = "<permission android:name=\"$CLIPBOARD_PERMISSION_NAME\" " +
+    if (!text.contains(Constants.CLIPBOARD_PERMISSION_NAME)) {
+        val declaration = "<permission android:name=\"${Constants.CLIPBOARD_PERMISSION_NAME}\" " +
             "android:protectionLevel=\"signature\" />"
         text = text.replaceFirst("<application", "$declaration\n    <application")
     }
