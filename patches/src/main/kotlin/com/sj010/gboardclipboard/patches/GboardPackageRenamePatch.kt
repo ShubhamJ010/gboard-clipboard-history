@@ -305,15 +305,7 @@ private fun rewriteSettingsTargetPackages(): Unit = with(context) {
     for (path in GBOARD_SETTINGS_XML_PATHS) {
         try {
             val file = get(path, false)
-            if (!file.exists()) continue
-            val original = file.readText()
-            val updated = original.replace(
-                "targetPackage=\"$GBOARD_PACKAGE_NAME\"",
-                "targetPackage=\"$RENAMED_PACKAGE_NAME\"",
-            )
-            if (updated != original) {
-                file.writeText(updated)
-            }
+            enforceIntentTargetPackage(file, RENAMED_PACKAGE_NAME, GBOARD_PACKAGE_NAME)
         } catch (_: Throwable) {
         }
     }

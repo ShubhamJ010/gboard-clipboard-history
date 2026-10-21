@@ -46,8 +46,7 @@ public final class GboardClipboardBackfill {
         if (context == null) {
             return null;
         }
-        Context appContext = context.getApplicationContext();
-        Context lookupContext = appContext != null ? appContext : context;
+        Context lookupContext = lookupContext(context);
         try {
             ClipboardManager cm = (ClipboardManager) lookupContext.getSystemService(Context.CLIPBOARD_SERVICE);
             if (cm == null || !cm.hasPrimaryClip()) {
@@ -111,8 +110,7 @@ public final class GboardClipboardBackfill {
         if (context == null) {
             return false;
         }
-        Context appContext = context.getApplicationContext();
-        Context lookupContext = appContext != null ? appContext : context;
+        Context lookupContext = lookupContext(context);
         try {
             PrimaryClip primary = readPrimaryClip(lookupContext);
             if (primary == null || !primary.hasText()) {
@@ -146,8 +144,13 @@ public final class GboardClipboardBackfill {
         }
     }
 
-    public static void backfillIfNecessary(Context context) {
-        backfillPrimaryClip(context);
+    /**
+     * The clipboard service belongs to the application, so the application
+     * context is the one to read it through.
+     */
+    private static Context lookupContext(Context context) {
+        Context appContext = context.getApplicationContext();
+        return appContext != null ? appContext : context;
     }
 
     static String buildMarker(String text) {

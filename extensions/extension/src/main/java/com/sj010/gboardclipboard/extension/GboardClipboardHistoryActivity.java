@@ -78,6 +78,11 @@ public final class GboardClipboardHistoryActivity extends Activity {
     private static final int THUMBNAIL_CACHE_ENTRIES = 40;
     private static final long REFRESH_INTERVAL_MS = 5000L;
 
+    /** Danger and warning accents. They stay the same in light and dark mode. */
+    private static final int COLOR_DANGER = 0xFFEF4444;
+    private static final int COLOR_WARNING_TEXT = 0xFF92400E;
+    private static final int COLOR_WARNING_TEXT_MUTED = 0xFF78350F;
+
     private Palette palette;
     private LinearLayout toolbar;
     private ScrollView contentScrollView;
@@ -118,7 +123,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
     protected void onResume() {
         super.onResume();
         isResumed = true;
-        GboardClipboardBackfill.backfillIfNecessary(this);
+        GboardClipboardBackfill.backfillPrimaryClip(this);
         renderAll();
         mainHandler.removeCallbacks(refreshRunnable);
         mainHandler.postDelayed(refreshRunnable, REFRESH_INTERVAL_MS);
@@ -360,12 +365,14 @@ public final class GboardClipboardHistoryActivity extends Activity {
     private void checkAndRefreshIfChanged() {
         try {
             boolean includeSensitive = GboardClipboardHistorySettings.isSensitiveIncluded(this);
-            int currentCount = GboardClipboardHistoryRepository.countHistory(this, includeSensitive);
+            GboardClipboardHistoryRepository.HistorySnapshot snapshot =
+                    GboardClipboardHistoryRepository.loadSnapshot(this, includeSensitive, 1);
             List<GboardClipboardHistoryRepository.ClipboardEntry> latestList =
-                    GboardClipboardHistoryRepository.loadHistory(this, includeSensitive, 1);
+                    snapshot.getEntries();
             long latestTimestamp = latestList.isEmpty() ? 0L : latestList.get(0).getTimestamp();
 
-            if (currentCount != lastLoadedTotalCount || latestTimestamp != lastLoadedLatestTimestamp) {
+            if (snapshot.getTotalCount() != lastLoadedTotalCount
+                    || latestTimestamp != lastLoadedLatestTimestamp) {
                 renderAll();
             }
         } catch (Throwable ignored) {
@@ -380,31 +387,27 @@ public final class GboardClipboardHistoryActivity extends Activity {
         contentColumn.addView(buildHeaderCard());
 
         boolean includeSensitive = GboardClipboardHistorySettings.isSensitiveIncluded(this);
-        List<GboardClipboardHistoryRepository.ClipboardEntry> entries;
-        int totalCount;
-        try {
-            entries = GboardClipboardHistoryRepository.loadHistory(this, includeSensitive, MAX_VISIBLE_ENTRIES);
-            totalCount = GboardClipboardHistoryRepository.countHistory(this, includeSensitive);
-            lastLoadedTotalCount = totalCount;
-            lastLoadedLatestTimestamp = entries.isEmpty() ? 0L : entries.get(0).getTimestamp();
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed to load clipboard history", t);
-            entries = null;
-            totalCount = 0;
-        }
+        GboardClipboardHistoryRepository.HistorySnapshot snapshot =
+                GboardClipboardHistoryRepository.loadSnapshot(this, includeSensitive, MAX_VISIBLE_ENTRIES);
 
-        if (entries == null) {
+        if (!snapshot.isAvailable()) {
             contentColumn.addView(buildStatusBlock(
                     "Clipboard history unavailable",
                     "The clipboard history database could not be read.",
                     StatusTone.WARNING));
-        } else if (entries.isEmpty()) {
-            contentColumn.addView(buildStatusBlock(
-                    "Clipboard is empty",
-                    "Copies made while Gboard is the active keyboard show up here. Copy some text or an image, then reopen this screen.",
-                    StatusTone.NEUTRAL));
         } else {
-            contentColumn.addView(buildRecentEntriesSection(entries, totalCount));
+            List<GboardClipboardHistoryRepository.ClipboardEntry> entries = snapshot.getEntries();
+            lastLoadedTotalCount = snapshot.getTotalCount();
+            lastLoadedLatestTimestamp = entries.isEmpty() ? 0L : entries.get(0).getTimestamp();
+
+            if (entries.isEmpty()) {
+                contentColumn.addView(buildStatusBlock(
+                        "Clipboard is empty",
+                        "Copies made while Gboard is the active keyboard show up here. Copy some text or an image, then reopen this screen.",
+                        StatusTone.NEUTRAL));
+            } else {
+                contentColumn.addView(buildRecentEntriesSection(entries, snapshot.getTotalCount()));
+            }
         }
 
         contentColumn.addView(buildExternalAccessSection());
@@ -472,13 +475,15 @@ public final class GboardClipboardHistoryActivity extends Activity {
         tvTitle.setText(title);
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        tvTitle.setTextColor(tone == StatusTone.WARNING ? Color.parseColor("#92400E") : palette.textPrimary);
+        tvTitle.setTextColor(tone == StatusTone.WARNING ? COLOR_WARNING_TEXT : palette.textPrimary);
         block.addView(tvTitle);
 
         TextView tvSummary = new TextView(this);
         tvSummary.setText(summary);
         tvSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        tvSummary.setTextColor(tone == StatusTone.WARNING ? Color.parseColor("#78350F") : palette.textSecondary);
+        tvSummary.setTextColor(tone == StatusTone.WARNING
+                ? COLOR_WARNING_TEXT_MUTED
+                : palette.textSecondary);
         tvSummary.setPadding(0, dp(4), 0, 0);
         block.addView(tvSummary);
 
@@ -550,7 +555,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
             if (isImage) {
                 openImageUri(entry.getUri());
             } else {
-                copyTextToClipboard("Clipboard entry", entry.getPasteableText(), "Clipboard entry copied.");
+                copyTextToClipboard("Clipboard entry", entry.getPasteableText(), "Clipboard entry copied.", false);
             }
         });
 
@@ -611,7 +616,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
                 providerUri,
                 "Tap to copy the provider URI.",
                 true,
-                () -> copyTextToClipboard("Provider URI", providerUri, "Provider URI copied.")));
+                () -> copyTextToClipboard("Provider URI", providerUri, "Provider URI copied.", false)));
 
         rows.add(createDetailRow(
                 "Endpoints",
@@ -693,23 +698,63 @@ public final class GboardClipboardHistoryActivity extends Activity {
         return section;
     }
 
-    private View createToggleRow(
-            String title, String summary, boolean isChecked, CompoundButton.OnCheckedChangeListener listener) {
+    /**
+     * Builds one row of a card: the text column on the left and an optional
+     * trailing widget on the right. Every row of the screen goes through here,
+     * so the padding, the ripple and the alignment stay the same everywhere.
+     */
+    private LinearLayout buildRow(LinearLayout textColumn, View trailingView) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(16), dp(14), dp(16), dp(14));
+        row.setClickable(true);
+        row.setFocusable(true);
         row.setBackground(buildRippleDrawable(0));
 
+        row.addView(textColumn);
+
+        if (trailingView != null) {
+            LinearLayout.LayoutParams trailingParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            trailingParams.leftMargin = dp(12);
+            row.addView(trailingView, trailingParams);
+        }
+
+        return row;
+    }
+
+    /**
+     * Builds the text column of a row: the title, and optionally a value, a
+     * summary and a hint. The parts that a row does not use stay null.
+     */
+    private LinearLayout buildRowTextColumn(
+            String title, String summary, String value, String hint,
+            int titleColor, boolean boldTitle, boolean monospaceValue) {
         LinearLayout textCol = new LinearLayout(this);
         textCol.setOrientation(LinearLayout.VERTICAL);
         textCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView tvTitle = new TextView(this);
         tvTitle.setText(title);
-        tvTitle.setTextColor(palette.textPrimary);
+        tvTitle.setTextColor(titleColor);
         tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        if (boldTitle) {
+            tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        }
         textCol.addView(tvTitle);
+
+        if (value != null) {
+            TextView tvValue = new TextView(this);
+            tvValue.setText(value);
+            tvValue.setTextColor(palette.textSecondary);
+            tvValue.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            if (monospaceValue) {
+                tvValue.setTypeface(Typeface.MONOSPACE);
+            }
+            tvValue.setPadding(0, dp(3), 0, 0);
+            textCol.addView(tvValue);
+        }
 
         if (summary != null) {
             TextView tvSummary = new TextView(this);
@@ -719,58 +764,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
             tvSummary.setPadding(0, dp(3), 0, 0);
             textCol.addView(tvSummary);
         }
-        row.addView(textCol);
-
-        Switch switchView = new Switch(this);
-        switchView.setTrackDrawable(new Material3SwitchTrackDrawable());
-        switchView.setThumbDrawable(new Material3SwitchThumbDrawable());
-        switchView.setSplitTrack(false);
-        switchView.setChecked(isChecked);
-        switchView.setOnCheckedChangeListener(listener);
-        switchView.setClickable(false);
-        switchView.setFocusable(false);
-
-        LinearLayout.LayoutParams switchParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        switchParams.leftMargin = dp(12);
-        row.addView(switchView, switchParams);
-
-        row.setClickable(true);
-        row.setFocusable(true);
-        row.setOnClickListener(v -> switchView.toggle());
-
-        return row;
-    }
-
-    private View createCopyRow(
-            String title, String value, String hint, boolean monospace, final Runnable onCopyAction) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(16), dp(14), dp(16), dp(14));
-        row.setClickable(true);
-        row.setFocusable(true);
-        row.setBackground(buildRippleDrawable(0));
-
-        LinearLayout textCol = new LinearLayout(this);
-        textCol.setOrientation(LinearLayout.VERTICAL);
-        textCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView tvTitle = new TextView(this);
-        tvTitle.setText(title);
-        tvTitle.setTextColor(palette.textPrimary);
-        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        textCol.addView(tvTitle);
-
-        TextView tvValue = new TextView(this);
-        tvValue.setText(value);
-        tvValue.setTextColor(palette.textSecondary);
-        tvValue.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        if (monospace) {
-            tvValue.setTypeface(Typeface.MONOSPACE);
-        }
-        tvValue.setPadding(0, dp(3), 0, 0);
-        textCol.addView(tvValue);
 
         if (hint != null) {
             TextView tvHint = new TextView(this);
@@ -780,8 +773,31 @@ public final class GboardClipboardHistoryActivity extends Activity {
             tvHint.setPadding(0, dp(2), 0, 0);
             textCol.addView(tvHint);
         }
-        row.addView(textCol);
 
+        return textCol;
+    }
+
+    private View createToggleRow(
+            String title, String summary, boolean isChecked, CompoundButton.OnCheckedChangeListener listener) {
+        Switch switchView = new Switch(this);
+        switchView.setTrackDrawable(new Material3SwitchTrackDrawable());
+        switchView.setThumbDrawable(new Material3SwitchThumbDrawable());
+        switchView.setSplitTrack(false);
+        switchView.setChecked(isChecked);
+        switchView.setOnCheckedChangeListener(listener);
+        switchView.setClickable(false);
+        switchView.setFocusable(false);
+
+        LinearLayout row = buildRow(
+                buildRowTextColumn(title, summary, null, null, palette.textPrimary, false, false),
+                switchView);
+        row.setOnClickListener(v -> switchView.toggle());
+
+        return row;
+    }
+
+    private View createCopyRow(
+            String title, String value, String hint, boolean monospace, final Runnable onCopyAction) {
         TextView chip = new TextView(this);
         chip.setText("Copy");
         chip.setTextColor(palette.accent);
@@ -789,11 +805,10 @@ public final class GboardClipboardHistoryActivity extends Activity {
         chip.setTypeface(Typeface.DEFAULT_BOLD);
         chip.setBackground(buildCardDrawable(palette.infoContainer, palette.surfaceStroke, 12));
         chip.setPadding(dp(10), dp(4), dp(10), dp(4));
-        LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        chipParams.leftMargin = dp(12);
-        row.addView(chip, chipParams);
 
+        LinearLayout row = buildRow(
+                buildRowTextColumn(title, null, value, hint, palette.textPrimary, false, monospace),
+                chip);
         row.setOnClickListener(v -> {
             if (onCopyAction != null) {
                 onCopyAction.run();
@@ -804,34 +819,9 @@ public final class GboardClipboardHistoryActivity extends Activity {
     }
 
     private View createCommandRow(String title, String summary, final Runnable action) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(16), dp(14), dp(16), dp(14));
-        row.setClickable(true);
-        row.setFocusable(true);
-        row.setBackground(buildRippleDrawable(0));
-
-        LinearLayout textCol = new LinearLayout(this);
-        textCol.setOrientation(LinearLayout.VERTICAL);
-        textCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView tvTitle = new TextView(this);
-        tvTitle.setText(title);
-        tvTitle.setTextColor(palette.textPrimary);
-        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        textCol.addView(tvTitle);
-
-        if (summary != null) {
-            TextView tvSummary = new TextView(this);
-            tvSummary.setText(summary);
-            tvSummary.setTextColor(palette.textSecondary);
-            tvSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            tvSummary.setPadding(0, dp(3), 0, 0);
-            textCol.addView(tvSummary);
-        }
-        row.addView(textCol);
-
+        LinearLayout row = buildRow(
+                buildRowTextColumn(title, summary, null, null, palette.textPrimary, false, false),
+                null);
         row.setOnClickListener(v -> {
             if (action != null) {
                 action.run();
@@ -867,35 +857,9 @@ public final class GboardClipboardHistoryActivity extends Activity {
 
     private View createDangerRow(
             String title, String summary, final String dialogTitle, final String dialogMessage, final Runnable onConfirm) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(16), dp(14), dp(16), dp(14));
-        row.setClickable(true);
-        row.setFocusable(true);
-        row.setBackground(buildRippleDrawable(0));
-
-        LinearLayout textCol = new LinearLayout(this);
-        textCol.setOrientation(LinearLayout.VERTICAL);
-        textCol.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView tvTitle = new TextView(this);
-        tvTitle.setText(title);
-        tvTitle.setTextColor(Color.parseColor("#EF4444"));
-        tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        textCol.addView(tvTitle);
-
-        if (summary != null) {
-            TextView tvSummary = new TextView(this);
-            tvSummary.setText(summary);
-            tvSummary.setTextColor(palette.textSecondary);
-            tvSummary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            tvSummary.setPadding(0, dp(3), 0, 0);
-            textCol.addView(tvSummary);
-        }
-        row.addView(textCol);
-
+        LinearLayout row = buildRow(
+                buildRowTextColumn(title, summary, null, null, COLOR_DANGER, true, false),
+                null);
         row.setOnClickListener(v -> {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle(dialogTitle);
@@ -908,7 +872,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
             builder.setNegativeButton("Cancel", null);
             AlertDialog dialog = builder.create();
             dialog.show();
-            tintDialogButtons(dialog, Color.parseColor("#EF4444"));
+            tintDialogButtons(dialog, COLOR_DANGER);
         });
 
         return row;
@@ -1035,7 +999,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
 
         builder.setView(scroll);
         builder.setPositiveButton("Copy", (dialog, which) -> {
-            copyTextToClipboard("Clipboard entry", text, "Clipboard entry copied.");
+            copyTextToClipboard("Clipboard entry", text, "Clipboard entry copied.", false);
         });
         builder.setNegativeButton("Close", null);
         AlertDialog dialog = builder.create();
@@ -1097,16 +1061,33 @@ public final class GboardClipboardHistoryActivity extends Activity {
         }
     }
 
-    private void copyTextToClipboard(String label, String text, String toastMessage) {
+    /**
+     * Copies text to the clipboard.
+     *
+     * @param sensitive when true the clip is marked sensitive, so it does not
+     *     show up in a clipboard preview and does not land in the history as a
+     *     normal entry.
+     */
+    private void copyTextToClipboard(String label, String text, String toastMessage, boolean sensitive) {
         if (text == null) {
             return;
         }
         try {
             ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm != null) {
-                cm.setPrimaryClip(ClipData.newPlainText(label, text));
-                Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show();
+            if (cm == null) {
+                return;
             }
+            if (sensitive) {
+                ClipDescription description = new ClipDescription(
+                        label, new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
+                PersistableBundle extras = new PersistableBundle();
+                extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);
+                description.setExtras(extras);
+                cm.setPrimaryClip(new ClipData(description, new ClipData.Item(text)));
+            } else {
+                cm.setPrimaryClip(ClipData.newPlainText(label, text));
+            }
+            Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show();
         } catch (Throwable t) {
             Log.w(TAG, "Failed to copy to clipboard", t);
         }
@@ -1120,24 +1101,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
      * preview on the screen.
      */
     private void copyAccessTokenToClipboard(String token) {
-        if (token == null) {
-            return;
-        }
-        try {
-            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm == null) {
-                return;
-            }
-            ClipDescription description = new ClipDescription(
-                    "Access token", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
-            PersistableBundle extras = new PersistableBundle();
-            extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);
-            description.setExtras(extras);
-            cm.setPrimaryClip(new ClipData(description, new ClipData.Item(token)));
-            Toast.makeText(this, "Access token copied.", Toast.LENGTH_SHORT).show();
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed to copy access token to clipboard", t);
-        }
+        copyTextToClipboard("Access token", token, "Access token copied.", true);
     }
 
     private void tintDialogButtons(AlertDialog dialog, int positiveColor) {
@@ -1219,11 +1183,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
     }
 
     private int dp(float dp) {
-        return Math.round(TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics()));
-    }
-
-    private int dp(int dp) {
         return Math.round(TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP, dp, getResources().getDisplayMetrics()));
     }
@@ -1382,16 +1341,25 @@ public final class GboardClipboardHistoryActivity extends Activity {
         }
     }
 
-    private final class Material3SwitchTrackDrawable extends Drawable {
-        private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private boolean isChecked = false;
-        private boolean isEnabled = true;
+    /**
+     * Shared state handling for the Material 3 switch drawables.
+     *
+     * The track and the thumb follow the same checked and enabled states, so the
+     * parsing of the state array and the alpha and color filter plumbing live
+     * here instead of in both drawables.
+     */
+    private abstract static class Material3SwitchDrawable extends Drawable {
+        private final List<Paint> paints = new ArrayList<>();
+        protected boolean isChecked = false;
+        protected boolean isEnabled = true;
 
-        Material3SwitchTrackDrawable() {
-            fillPaint.setStyle(Paint.Style.FILL);
-            strokePaint.setStyle(Paint.Style.STROKE);
-            strokePaint.setStrokeWidth(dp(2));
+        /**
+         * Registers a paint that has to follow the alpha and the color filter.
+         * The subclasses call this from their constructor, because a field of the
+         * subclass cannot be handed to the supertype constructor.
+         */
+        protected void addPaint(Paint paint) {
+            paints.add(paint);
         }
 
         @Override
@@ -1418,6 +1386,38 @@ public final class GboardClipboardHistoryActivity extends Activity {
                 return true;
             }
             return false;
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+            for (Paint paint : paints) {
+                paint.setAlpha(alpha);
+            }
+        }
+
+        @Override
+        public void setColorFilter(ColorFilter colorFilter) {
+            for (Paint paint : paints) {
+                paint.setColorFilter(colorFilter);
+            }
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+    }
+
+    private final class Material3SwitchTrackDrawable extends Material3SwitchDrawable {
+        private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        Material3SwitchTrackDrawable() {
+            fillPaint.setStyle(Paint.Style.FILL);
+            strokePaint.setStyle(Paint.Style.STROKE);
+            strokePaint.setStrokeWidth(dp(2));
+            addPaint(fillPaint);
+            addPaint(strokePaint);
         }
 
         @Override
@@ -1445,31 +1445,12 @@ public final class GboardClipboardHistoryActivity extends Activity {
         public int getIntrinsicHeight() {
             return dp(32);
         }
-
-        @Override
-        public void setAlpha(int alpha) {
-            fillPaint.setAlpha(alpha);
-            strokePaint.setAlpha(alpha);
-        }
-
-        @Override
-        public void setColorFilter(ColorFilter colorFilter) {
-            fillPaint.setColorFilter(colorFilter);
-            strokePaint.setColorFilter(colorFilter);
-        }
-
-        @Override
-        public int getOpacity() {
-            return PixelFormat.TRANSLUCENT;
-        }
     }
 
-    private final class Material3SwitchThumbDrawable extends Drawable {
+    private final class Material3SwitchThumbDrawable extends Material3SwitchDrawable {
         private final Paint thumbPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint checkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path checkPath = new Path();
-        private boolean isChecked = false;
-        private boolean isEnabled = true;
 
         Material3SwitchThumbDrawable() {
             thumbPaint.setStyle(Paint.Style.FILL);
@@ -1477,32 +1458,8 @@ public final class GboardClipboardHistoryActivity extends Activity {
             checkPaint.setStrokeCap(Paint.Cap.ROUND);
             checkPaint.setStrokeJoin(Paint.Join.ROUND);
             checkPaint.setStrokeWidth(dp(2.2f));
-        }
-
-        @Override
-        public boolean isStateful() {
-            return true;
-        }
-
-        @Override
-        protected boolean onStateChange(int[] state) {
-            boolean checked = false;
-            boolean enabled = false;
-            for (int s : state) {
-                if (s == android.R.attr.state_checked) {
-                    checked = true;
-                }
-                if (s == android.R.attr.state_enabled) {
-                    enabled = true;
-                }
-            }
-            if (isChecked != checked || isEnabled != enabled) {
-                isChecked = checked;
-                isEnabled = enabled;
-                invalidateSelf();
-                return true;
-            }
-            return false;
+            addPaint(thumbPaint);
+            addPaint(checkPaint);
         }
 
         @Override
@@ -1536,23 +1493,6 @@ public final class GboardClipboardHistoryActivity extends Activity {
         @Override
         public int getIntrinsicHeight() {
             return dp(32);
-        }
-
-        @Override
-        public void setAlpha(int alpha) {
-            thumbPaint.setAlpha(alpha);
-            checkPaint.setAlpha(alpha);
-        }
-
-        @Override
-        public void setColorFilter(ColorFilter colorFilter) {
-            thumbPaint.setColorFilter(colorFilter);
-            checkPaint.setColorFilter(colorFilter);
-        }
-
-        @Override
-        public int getOpacity() {
-            return PixelFormat.TRANSLUCENT;
         }
     }
 }

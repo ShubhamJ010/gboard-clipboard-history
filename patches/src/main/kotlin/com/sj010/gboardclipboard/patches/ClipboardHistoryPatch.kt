@@ -31,26 +31,29 @@ val clipboardHistoryPatch = resourcePatch(
     dependsOn(gboardClipboardCarrierPatch)
 
     execute {
-        applyClipboardHistoryManifestModifications()
+        applyClipboardActivityDeclaration()
+        applyClipboardProviderIdentity()
         applyClipboardSettingsXmlModifications()
     }
 
     // The package rename patch rewrites the manifest package in its own execute
-    // phase, so the authority and permission are (re)computed here, once the
-    // final host package is known.
+    // phase, so the authority and the permission are (re)computed here, once the
+    // final host package is known. The activity declaration does not depend on
+    // the package name and is therefore not repeated.
     finalize {
-        applyClipboardHistoryManifestModifications()
+        applyClipboardProviderIdentity()
     }
 }
 
+/**
+ * Declares the clipboard history activity. The declaration does not depend on the
+ * host package, so it only has to be written once.
+ */
 context(context: ResourcePatchContext)
-private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
+private fun applyClipboardActivityDeclaration(): Unit = with(context) {
     document("AndroidManifest.xml").use { doc ->
         val manifest = doc.documentElement
         val application = manifest.childElements("application").firstOrNull() ?: return@use
-        val packageName = manifest.getAttribute("package") ?: ""
-        val providerAuthority = Constants.providerAuthorityFor(packageName)
-        val permissionName = Constants.permissionNameFor(packageName)
 
         // Find or create GboardClipboardHistoryActivity declaration
         val activity = application.childElements("activity").firstOrNull {
@@ -83,9 +86,26 @@ private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
         }.toList()
         launcherFilters.forEach { activity.removeChild(it) }
 
-        // Expose the clipboard history to companion apps through a read-only provider.
-        // The authority is scoped to the host package so that several patched
-        // keyboards can be installed side by side.
+        Unit
+    }
+}
+
+/**
+ * Exposes the clipboard history to companion apps through a read-only provider.
+ *
+ * The authority and the permission are derived from the host package, so that several
+ * patched keyboards can be installed side by side without clashing on the global
+ * namespaces.
+ */
+context(context: ResourcePatchContext)
+private fun applyClipboardProviderIdentity(): Unit = with(context) {
+    document("AndroidManifest.xml").use { doc ->
+        val manifest = doc.documentElement
+        val application = manifest.childElements("application").firstOrNull() ?: return@use
+        val packageName = manifest.getAttribute("package") ?: ""
+        val providerAuthority = Constants.providerAuthorityFor(packageName)
+        val permissionName = Constants.permissionNameFor(packageName)
+
         removeStaleClipboardPermissions(doc, manifest, permissionName)
         ensureManifestPermission(doc, manifest, permissionName)
         val provider = ensureManifestComponent(doc, application, "provider", Constants.CLIPBOARD_PROVIDER_CLASS)
@@ -200,7 +220,7 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
         }
     } catch (_: Throwable) {
     }
-    enforceIntentTargetPackage("res/xml/setting_clipboard.xml", packageName)
+    enforceClipboardIntentTargetPackage("res/xml/setting_clipboard.xml", packageName)
 }
 
 /**
@@ -251,24 +271,10 @@ private fun removeClipboardPrefFromSettings(path: String): Unit = with(context) 
  * already ran or still has to run.
  */
 context(context: ResourcePatchContext)
-private fun enforceIntentTargetPackage(path: String, packageName: String): Unit = with(context) {
+private fun enforceClipboardIntentTargetPackage(path: String, packageName: String): Unit = with(context) {
     if (packageName.isBlank()) return@with
     try {
-        val file = get(path, false)
-        if (!file.exists()) return@with
-        val original = file.readText()
-        val intentRegex = Regex(
-            """<intent\b[^>]*targetClass="${Regex.escape(Constants.CLIPBOARD_ACTIVITY_CLASS)}"[^>]*/>""",
-        )
-        val updated = intentRegex.replace(original) { match ->
-            match.value.replace(
-                Regex("""targetPackage="[^"]*""""),
-                """targetPackage="$packageName"""",
-            )
-        }
-        if (updated != original) {
-            file.writeText(updated)
-        }
+        enforceIntentTargetPackage(get(path, false), packageName, "", Constants.CLIPBOARD_ACTIVITY_CLASS)
     } catch (_: Throwable) {
     }
 }
