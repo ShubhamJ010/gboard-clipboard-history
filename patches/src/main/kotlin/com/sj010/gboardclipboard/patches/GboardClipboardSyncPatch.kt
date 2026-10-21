@@ -15,8 +15,6 @@ val gboardClipboardSyncPatch = bytecodePatch(
     compatibleWith(
         Constants.COMPATIBILITY_GBOARD,
         Constants.COMPATIBILITY_PIXELBOARD,
-        Constants.COMPATIBILITY_SJ010_GBOARD,
-        Constants.COMPATIBILITY_SJ010_PIXELBOARD,
     )
     dependsOn(gboardClipboardCarrierPatch)
 

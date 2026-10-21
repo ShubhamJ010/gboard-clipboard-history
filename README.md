@@ -9,12 +9,12 @@ It runs as a standalone patch and does not require other keyboard modifications.
     <img src="https://img.shields.io/badge/Add_to-Morphe-1E88E5?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Add to Morphe"/>
   </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.2-alpha">
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.3-alpha">
     <img src="https://img.shields.io/badge/📦_Morphe_Patch_(.mpp)-v0.0.2--alpha-2979FF?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Morphe Patch (.mpp)"/>
   </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.2-alpha">
-    <img src="https://img.shields.io/badge/📥_Release-0.0.2--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.2-alpha"/>
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.3-alpha">
+    <img src="https://img.shields.io/badge/📥_Release-0.0.3--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.3-alpha"/>
   </a>
 </p>
 
@@ -168,14 +168,19 @@ certificate differs (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
 
 ## Downloads
 
-Every release provides exactly two assets:
+Every release provides the patch bundle and the three patched APKs:
 
-| Package | Format | Description |
+| Asset | Format | Description |
 | :--- | :--- | :--- |
-| **Gboard-com.sj010.gboard.apk** | Signed APK | Standalone patched keyboard package with clipboard history pre-integrated. |
-| **patches-0.0.2-alpha.mpp** | Morphe Patch | Standalone patch bundle for use with Morphe Manager or CLI patcher. |
+| **patches-0.0.3-alpha.mpp** | Morphe Patch | Standalone patch bundle for use with Morphe Manager or CLI patcher. Targets Gboard and PixelBoard. |
+| **Gboard-com.sj010.gboard.apk** | Signed APK | Gboard + Clipboard History, package `com.sj010.gboard`. |
+| **Gboard-PixelBoard-akshaykadam.apk** | Signed APK | Gboard + PixelBoard + Clipboard History, package `com.akshaykadam.pixelboard`. |
+| **PixelBoard-clipboard-sj010.apk** | Signed APK | Released PixelBoard APK + Clipboard History, package `com.akshaykadam.pixelboard`. |
 
-Download both files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.2-alpha) page.
+Download the files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.3-alpha) page.
+
+> The two `com.akshaykadam.pixelboard` APKs share the same package name, so only one of them can be
+> installed at a time.
 
 ## ContentProvider API
 

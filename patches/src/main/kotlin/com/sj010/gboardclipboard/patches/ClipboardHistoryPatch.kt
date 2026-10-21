@@ -52,8 +52,6 @@ val clipboardHistoryPatch = resourcePatch(
     compatibleWith(
         Constants.COMPATIBILITY_GBOARD,
         Constants.COMPATIBILITY_PIXELBOARD,
-        Constants.COMPATIBILITY_SJ010_GBOARD,
-        Constants.COMPATIBILITY_SJ010_PIXELBOARD,
     )
 
     // The runtime extension (activity + provider + repository) lives in a separate DEX.

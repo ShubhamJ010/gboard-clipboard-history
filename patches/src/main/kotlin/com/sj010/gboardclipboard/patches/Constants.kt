@@ -55,20 +55,4 @@ internal object Constants {
         appIconColor = 0x2979FF,
         targets = TARGET_VERSIONS,
     )
-
-    val COMPATIBILITY_SJ010_GBOARD = Compatibility(
-        name = "SJ Gboard",
-        packageName = SJ010_GBOARD_PACKAGE_NAME,
-        apkFileType = ApkFileType.APK,
-        appIconColor = 0x2979FF,
-        targets = TARGET_VERSIONS,
-    )
-
-    val COMPATIBILITY_SJ010_PIXELBOARD = Compatibility(
-        name = "SJ PixelBoard",
-        packageName = SJ010_PIXELBOARD_PACKAGE_NAME,
-        apkFileType = ApkFileType.APK,
-        appIconColor = 0x2979FF,
-        targets = TARGET_VERSIONS,
-    )
 }

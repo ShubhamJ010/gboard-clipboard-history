@@ -10,6 +10,9 @@ import java.io.File
 
 private const val GBOARD_PACKAGE_NAME = "com.google.android.inputmethod.latin"
 private const val RENAMED_PACKAGE_NAME = "com.sj010.gboard"
+private const val CLIPBOARD_PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history"
+private const val CLIPBOARD_PERMISSION_NAME =
+    "com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY"
 
 /**
  * Preference XML files that may embed `<intent>` elements pointing back at the host package.
@@ -168,13 +171,54 @@ val gboardPackageRenamePatch = resourcePatch(
 
     execute {
         applyManifestPackageOverride()
+        applyClipboardProviderIdentity()
         rewriteSettingsTargetPackages()
     }
 
     // Runs after every `execute` block, so the preference documents are already patched
     // with the clipboard history entry when the target package is normalized.
     finalize {
+        applyClipboardProviderIdentity()
         rewriteSettingsTargetPackages()
+    }
+}
+
+/**
+ * Keeps the clipboard history provider identity in sync with the renamed package.
+ *
+ * The provider authority and the signature permission live in global namespaces.
+ * The clipboard history patch derives them from the manifest package it sees, so
+ * this patch normalises them to the documented `com.sj010.gboard` values once the
+ * package rename has been applied.
+ *
+ * The manifest is rewritten as raw text: DOM attribute mutations of the decoded
+ * manifest are not reliably flushed back into the workspace.
+ */
+context(context: ResourcePatchContext)
+private fun applyClipboardProviderIdentity(): Unit = with(context) {
+    val file = get("AndroidManifest.xml", false)
+    if (!file.exists()) return@with
+    val original = file.readText()
+
+    // 1. Drop every clipboard history permission declaration.
+    val permissionRegex = Regex(
+        """<permission\b[^>]*?android:name="[^"]*\.permission\.READ_CLIPBOARD_HISTORY"[^>]*?/>"""
+    )
+    var text = permissionRegex.replace(original, "")
+
+    // 2. Point the clipboard history provider at the documented authority.
+    val authorityRegex = Regex("""android:authorities="[^"]*\.gboardclipboard\.history"""")
+    text = authorityRegex.replace(text, """android:authorities="$CLIPBOARD_PROVIDER_AUTHORITY"""")
+
+    // 3. Declare the documented signature permission again.
+    if (!text.contains(CLIPBOARD_PERMISSION_NAME)) {
+        val declaration = "<permission android:name=\"$CLIPBOARD_PERMISSION_NAME\" " +
+            "android:protectionLevel=\"signature\" />"
+        text = text.replaceFirst("<application", "$declaration\n    <application")
+    }
+
+    if (text != original) {
+        file.writeText(text)
     }
 }
 
