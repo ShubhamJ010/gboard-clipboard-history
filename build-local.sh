@@ -56,14 +56,34 @@ VERSION="$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')
 
 REBUILD_EXTENSION=false
 STOCK_APK=""
+SIGNING_KEY="clipboard"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --rebuild-extension) REBUILD_EXTENSION=true; shift ;;
         --patch) STOCK_APK="${2:-}"; shift 2 ;;
+        --signing-key) SIGNING_KEY="${2:-}"; shift 2 ;;
         -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
+
+# Signing keystores. "clipboard" is this repo's own keystore, "pixelboard" reuses the sibling
+# PixelBoard keystore so the build keeps the same signature as an already installed build
+# (Android refuses updates when the signing certificate differs).
+case "$SIGNING_KEY" in
+    pixelboard)
+        SIGNER_NAME="PixelBoard"
+        KEYSTORE_PATH="$PIXELBOARD_DIR/tools/patcher-data/pixelboard.keystore"
+        KEYSTORE_PASSWORD="pixelboard"
+        KEYSTORE_ALIAS="pixelboard"
+        ;;
+    *)
+        SIGNER_NAME="GboardClipboard"
+        KEYSTORE_PATH="tools/patcher-data/clipboard.keystore"
+        KEYSTORE_PASSWORD="clipboard"
+        KEYSTORE_ALIAS="clipboard"
+        ;;
+esac
 
 for required in "$KOTLINC" "$PATCHER_JAR" "$BT/d8" "$ANDROID_JAR"; do
     if [[ ! -e "$required" ]]; then
@@ -134,28 +154,28 @@ fi
 
 echo "==> 5/5 patch stock APK"
 mkdir -p output tools/patcher-data
-KEYSTORE_PATH="tools/patcher-data/clipboard.keystore"
 if [[ ! -f "$KEYSTORE_PATH" ]]; then
     echo "    generating signing keystore..."
+    mkdir -p "$(dirname "$KEYSTORE_PATH")"
     keytool -genkeypair \
         -keystore "$KEYSTORE_PATH" \
-        -alias clipboard \
+        -alias "$KEYSTORE_ALIAS" \
         -keyalg RSA \
         -keysize 2048 \
         -validity 10000 \
-        -storepass clipboard \
-        -keypass clipboard \
-        -dname "CN=GboardClipboard, OU=Tools, O=OpenSource, L=Unknown, ST=Unknown, C=US" \
+        -storepass "$KEYSTORE_PASSWORD" \
+        -keypass "$KEYSTORE_PASSWORD" \
+        -dname "CN=$SIGNER_NAME, OU=Tools, O=OpenSource, L=Unknown, ST=Unknown, C=US" \
         >/dev/null 2>&1
 fi
 
 "$JAVA" -jar "$PATCHER_JAR" patch \
     --patches="$MPP_OUT" \
-    --signer="GboardClipboard" \
+    --signer="$SIGNER_NAME" \
     --keystore="$KEYSTORE_PATH" \
-    --keystore-password=clipboard \
-    --keystore-entry-alias=clipboard \
-    --keystore-entry-password=clipboard \
+    --keystore-password="$KEYSTORE_PASSWORD" \
+    --keystore-entry-alias="$KEYSTORE_ALIAS" \
+    --keystore-entry-password="$KEYSTORE_PASSWORD" \
     --temporary-files-path="tools/patcher-data/tmp" \
     -o="output/Gboard-com.sj010.gboard.apk" \
     -r="output/patching-result-local.json" \
