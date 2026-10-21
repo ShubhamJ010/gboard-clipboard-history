@@ -16,7 +16,7 @@ internal object Constants {
     const val PIXELBOARD_PACKAGE_NAME = "com.akshaykadam.pixelboard"
     const val RENAMED_PACKAGE_NAME = "com.sj010.gboard"
 
-    const val PATCH_VERSION = "0.0.5-alpha"
+    const val PATCH_VERSION = "0.0.6-alpha"
 
     const val CLIPBOARD_PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history"
     const val CLIPBOARD_PERMISSION_NAME =

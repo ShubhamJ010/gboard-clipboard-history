@@ -17,8 +17,8 @@ It runs as a standalone patch and does not require other keyboard modifications.
     <img src="https://img.shields.io/badge/Obtainium-PixelBoard_APK-blue?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Add PixelBoard to Obtainium"/>
   </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.5-alpha">
-    <img src="https://img.shields.io/badge/📥_Release-0.0.5--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.5-alpha"/>
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.6-alpha">
+    <img src="https://img.shields.io/badge/📥_Release-0.0.6--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.6-alpha"/>
   </a>
 </p>
 
@@ -243,11 +243,11 @@ Every release provides the patch bundle and pre-built APKs:
 
 | Asset | Format | Obtainium | Description |
 | :--- | :--- | :--- | :--- |
-| **patches-0.0.5-alpha.mpp** | Morphe Patch | n/a | Standalone patch bundle for use with Morphe Manager or CLI patcher. Targets Gboard and PixelBoard. |
+| **patches-0.0.6-alpha.mpp** | Morphe Patch | n/a | Standalone patch bundle for use with Morphe Manager or CLI patcher. Targets Gboard and PixelBoard. |
 | **Gboard-Clipboard-History.apk** | Signed APK | [Add to Obtainium]([obtainium-gboard]) | Standalone Gboard + Clipboard History (package `com.sj010.gboard`, installs side-by-side with stock Gboard). |
 | **PixelBoard-Clipboard-History.apk** | Signed APK | [Add to Obtainium]([obtainium-pixelboard]) | Gboard with PixelBoard theming + Clipboard History (package `com.akshaykadam.pixelboard`). |
 
-Download the files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.5-alpha) page.
+Download the files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.6-alpha) page.
 
 ## ContentProvider API
 
