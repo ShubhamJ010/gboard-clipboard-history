@@ -133,6 +133,11 @@ public final class GboardClipboardHistoryRepository {
         if (context == null) {
             return new HistorySnapshot(Collections.emptyList(), 0, false);
         }
+        if (!clipboardDatabaseExists(context)) {
+            // Gboard creates the database when it captures the first clip. Until
+            // then there is nothing to read, which is not a read failure.
+            return new HistorySnapshot(Collections.emptyList(), 0, true);
+        }
         SQLiteDatabase database = openForReading(context);
         if (database == null) {
             return new HistorySnapshot(Collections.emptyList(), 0, false);
@@ -342,6 +347,15 @@ public final class GboardClipboardHistoryRepository {
         } finally {
             closeQuietly(database);
         }
+    }
+
+    /**
+     * True when Gboard has already created its clipboard database. The database
+     * only appears once the keyboard captured the first clip.
+     */
+    private static boolean clipboardDatabaseExists(Context context) {
+        File databaseFile = context.getDatabasePath(DATABASE_NAME);
+        return databaseFile != null && databaseFile.exists();
     }
 
     /**
