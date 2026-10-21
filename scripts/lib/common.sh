@@ -260,12 +260,14 @@ resolve_keystore() {
 #   1. $INPUT_DIR/gboard-merged.apk (already merged, preferred)
 #   2. $INPUT_DIR/splits/*.apk merged on the fly with APKEditor
 #   3. $GBOARD_APK (explicit override)
+#   4. the pinned base from the build-inputs release, checked against its digest
 ensure_gboard_apk() {
     if [[ -n "${GBOARD_APK:-}" && -f "$GBOARD_APK" ]]; then
         echo "$GBOARD_APK"; return 0
     fi
     local merged="$INPUT_DIR/gboard-merged.apk"
     if [[ -f "$merged" ]]; then
+        verify_sha256 "$merged" "$GBOARD_BASE_APK_SHA256"
         echo "$merged"; return 0
     fi
     if [[ -d "$INPUT_DIR/splits" ]]; then
@@ -279,7 +281,9 @@ ensure_gboard_apk() {
             -o "$merged_out" >/dev/null 2>&1 || die "APKEditor merge failed"
         echo "$merged_out"; return 0
     fi
-    die "no Gboard base APK found. Place one at $merged or $INPUT_DIR/splits/, or set GBOARD_APK=<path>"
+    mkdir -p "$INPUT_DIR"
+    download_pinned "$GBOARD_BASE_APK_URL" "$merged" "$GBOARD_BASE_APK_SHA256"
+    echo "$merged"
 }
 
 # Latest released PixelBoard APK (release asset).

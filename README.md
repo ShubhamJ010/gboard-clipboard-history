@@ -17,8 +17,8 @@ It runs as a standalone patch and does not require other keyboard modifications.
     <img src="https://img.shields.io/badge/Obtainium-PixelBoard_APK-blue?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Add PixelBoard to Obtainium"/>
   </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.4-alpha">
-    <img src="https://img.shields.io/badge/📥_Release-0.0.4--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.4-alpha"/>
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.5-alpha">
+    <img src="https://img.shields.io/badge/📥_Release-0.0.5--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.5-alpha"/>
   </a>
 </p>
 
@@ -154,7 +154,7 @@ is missing:
 
 | Input | Source |
 | :--- | :--- |
-| `input/gboard-merged.apk` | Gboard v18.4.1 base. Provide it manually, or drop the raw splits into `input/splits/` and they get merged with APKEditor. Override with `GBOARD_APK=<path>`. |
+| `input/gboard-merged.apk` | Gboard v18.4.1 base, downloaded from the [build inputs release](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/build-inputs). You can also drop the raw splits into `input/splits/` and they get merged with APKEditor. Override with `GBOARD_APK=<path>`. |
 | `input/patches-1.2.0.mpp` | PixelBoard patch bundle, downloaded from the [PixelBoard](https://github.com/Akshayykadam/PixelBoard) repository. |
 | `input/PixelBoard-v18.4.1-Stable-V7.apk` | Latest released PixelBoard APK, downloaded from the PixelBoard releases (used for the PoC script). |
 
@@ -225,11 +225,11 @@ Every release provides the patch bundle and pre-built APKs:
 
 | Asset | Format | Obtainium | Description |
 | :--- | :--- | :--- | :--- |
-| **patches-0.0.4-alpha.mpp** | Morphe Patch | n/a | Standalone patch bundle for use with Morphe Manager or CLI patcher. Targets Gboard and PixelBoard. |
+| **patches-0.0.5-alpha.mpp** | Morphe Patch | n/a | Standalone patch bundle for use with Morphe Manager or CLI patcher. Targets Gboard and PixelBoard. |
 | **Gboard-Clipboard-History.apk** | Signed APK | [Add to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22com.sj010.gboard%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FShubhamJ010%2Fgboard-clipboard-history%22%2C%22author%22%3A%22ShubhamJ010%22%2C%22name%22%3A%22Gboard%20Clipboard%20History%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22releaseTitleAsVersion%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22releaseDateAsVersion%5C%22%3Afalse%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22Gboard-Clipboard-History.%2A%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22allowInsecure%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22%5C%22%2C%5C%22refreshBeforeDownload%5C%22%3Afalse%2C%5C%22includeZips%5C%22%3Afalse%2C%5C%22zippedApkFilterRegEx%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3Anull%7D) | Standalone Gboard + Clipboard History (package `com.sj010.gboard`, installs side-by-side with stock Gboard). |
 | **PixelBoard-Clipboard-History.apk** | Signed APK | [Add to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22com.akshaykadam.pixelboard%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FShubhamJ010%2Fgboard-clipboard-history%22%2C%22author%22%3A%22ShubhamJ010%22%2C%22name%22%3A%22PixelBoard%20Clipboard%20History%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22releaseTitleAsVersion%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22releaseDateAsVersion%5C%22%3Afalse%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22PixelBoard-Clipboard-History.%2A%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22allowInsecure%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22%5C%22%2C%5C%22refreshBeforeDownload%5C%22%3Afalse%2C%5C%22includeZips%5C%22%3Afalse%2C%5C%22zippedApkFilterRegEx%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3Anull%7D) | Gboard with PixelBoard theming + Clipboard History (package `com.akshaykadam.pixelboard`). |
 
-Download the files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.4-alpha) page.
+Download the files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.5-alpha) page.
 
 ## ContentProvider API
 
@@ -307,6 +307,44 @@ These are open and worth knowing before you rely on the feature.
 - Every download is pinned and checked. See [Pinned downloads](#pinned-downloads).
 - The release workflow runs with read only permissions, writes only on a tag, and pins every
   action to a commit.
+- The release assets are built by the workflow, not by a laptop, and every asset carries a build
+  provenance attestation. See [Release pipeline](#release-pipeline).
+
+### Release pipeline
+
+A tag push runs three jobs:
+
+| Job | What it does | Needs |
+| :--- | :--- | :--- |
+| `build` | Builds the patch bundle with Gradle | nothing |
+| `apk` | Builds the two patched APKs from the base APK and the bundle | `RELEASE_KEYSTORE_BASE64` and `KEYSTORE_PASSWORD` |
+| `release` | Publishes the release and attests every asset | the two jobs above |
+
+The `apk` job is skipped when the release secrets are not set. The release then carries the patch
+bundle only, and the two APKs have to be built and uploaded by hand.
+
+The secrets hold the release signing key:
+
+| Secret | Value |
+| :--- | :--- |
+| `RELEASE_KEYSTORE_BASE64` | The base64 encoded `clipboard.keystore` |
+| `KEYSTORE_PASSWORD` | The password of that keystore |
+
+Create them with:
+
+```bash
+base64 -i tools/patcher-data/clipboard.keystore | gh secret set RELEASE_KEYSTORE_BASE64
+gh secret set KEYSTORE_PASSWORD --body "<password>"
+```
+
+The certificate stays the same when the password changes, so installed builds keep updating over
+each other. Rotate the password and update the secret together.
+
+Verify an asset before you install it:
+
+```bash
+gh attestation verify Gboard-Clipboard-History.apk --repo ShubhamJ010/gboard-clipboard-history
+```
 
 ### Reporting a problem
 

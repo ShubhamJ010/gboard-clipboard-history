@@ -12,7 +12,7 @@ internal object Constants {
     const val PATCH_AUTHOR = "sj010"
     const val PATCH_AUTHOR_URL = "https://github.com/sj010"
     const val PATCH_REPOSITORY_URL = "https://github.com/sj010/gboard-clipboard-history"
-    const val PATCH_VERSION = "0.0.4-alpha"
+    const val PATCH_VERSION = "0.0.5-alpha"
 
     const val CLIPBOARD_PERMISSION_NAME =
         "com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY"
