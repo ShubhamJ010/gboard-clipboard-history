@@ -1,12 +1,17 @@
+import java.util.Properties
+
 group = "com.sj010.gboardclipboard"
 
 // The about block and the shell build (scripts/build-mpp.sh) must describe the
 // bundle the same way, so both read patches/about.properties. The literal
 // fallbacks keep the build working when the file is missing.
-val aboutProperties = java.util.Properties().apply {
+//
+// The import is needed because the project scope has a `java` extension, which
+// would shadow the `java` package inside a build script.
+val aboutProperties = Properties().apply {
     val aboutFile = file("about.properties")
     if (aboutFile.exists()) {
-        aboutFile.inputStream().use { load(it) }
+        aboutFile.inputStream().use { stream -> load(stream) }
     }
 }
 
