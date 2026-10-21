@@ -2,7 +2,7 @@
 
 A [Morphe](https://github.com/MorpheApp) patch that adds persistent clipboard history management to Google Gboard.
 
-It runs as a standalone patch and does not require other keyboard modifications.
+It runs as a standalone patch and does not require other keyboard modifications. It is also compatible with other popular keyboard mods like [PixelBoard](https://github.com/Akshayykadam/PixelBoard), proving that the patch can compose cleanly with external modifications.
 
 <p align="center">
   <a href="https://morphe.software/add-source?github=ShubhamJ010/gboard-clipboard-history&name=Gboard%20Clipboard%20History">
@@ -87,10 +87,10 @@ gboard-clipboard-history/
 │   ├── lib/common.sh                              # Shared tool, input and patcher helpers
 │   ├── build-mpp.sh                               # Build patches/GboardClipboardHistory.mpp
 │   ├── build-gradle.sh                            # Gradle build of the bundle (needs GITHUB_TOKEN)
-│   ├── build-gboard-clipboard.sh                  # App 1: Gboard + Clipboard History
-│   ├── build-gboard-clipboard-pixelboard.sh       # App 2: Gboard + PixelBoard + Clipboard History
-│   ├── build-pixelboard-clipboard.sh              # App 3: released PixelBoard + Clipboard History
-│   ├── build-all.sh                               # Build the bundle and all three APKs
+│   ├── build-gboard-clipboard.sh                  # Build Gboard + Clipboard History APK
+│   ├── build-gboard-clipboard-pixelboard.sh       # Build PixelBoard + Clipboard History APK
+│   ├── build-pixelboard-clipboard.sh              # PoC: Direct patch of released PixelBoard APK
+│   ├── build-all.sh                               # Build the bundle and APKs
 │   └── install.sh                                 # Install a built APK on a device
 ├── input/                         # Build inputs (git ignored, auto downloaded)
 │   ├── gboard-merged.apk                          # Gboard v18.4.1 base
@@ -116,17 +116,17 @@ repository root.
 
 Output: `patches/GboardClipboardHistory.mpp`.
 
-### The three patched APKs
+### Patched APKs
 
 ```bash
-./scripts/build-all.sh                                  # bundle + all three APKs
+./scripts/build-all.sh                                  # bundle + all APK targets
 ```
 
-| Script | Input | Output | Package |
-| :--- | :--- | :--- | :--- |
-| `build-gboard-clipboard.sh` | Gboard base | `output/Gboard-com.sj010.gboard.apk` | `com.sj010.gboard` |
-| `build-gboard-clipboard-pixelboard.sh` | Gboard base + PixelBoard `.mpp` | `output/Gboard-PixelBoard-akshaykadam.apk` | `com.akshaykadam.pixelboard` |
-| `build-pixelboard-clipboard.sh` | released PixelBoard APK | `output/PixelBoard-clipboard-sj010.apk` | `com.akshaykadam.pixelboard` |
+| Script | Input | Output | Package | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `build-gboard-clipboard.sh` | Gboard base | `output/Gboard-Clipboard-History.apk` | `com.sj010.gboard` | Gboard + Clipboard History (coexists with stock Gboard) |
+| `build-gboard-clipboard-pixelboard.sh` | Gboard base + PixelBoard `.mpp` | `output/PixelBoard-Clipboard-History.apk` | `com.akshaykadam.pixelboard` | Gboard + PixelBoard theming + Clipboard History |
+| `build-pixelboard-clipboard.sh` | released PixelBoard APK | `output/PixelBoard-clipboard-poc.apk` | `com.akshaykadam.pixelboard` | **PoC**: demonstrates directly patching a pre-built PixelBoard release APK |
 
 The first two scripts run the patcher twice on purpose: the package rename has to be finished
 before the clipboard history patch runs, because the provider authority and the signature
@@ -141,7 +141,7 @@ is missing:
 | :--- | :--- |
 | `input/gboard-merged.apk` | Gboard v18.4.1 base. Provide it manually, or drop the raw splits into `input/splits/` and they get merged with APKEditor. Override with `GBOARD_APK=<path>`. |
 | `input/patches-1.2.0.mpp` | PixelBoard patch bundle, downloaded from the [PixelBoard](https://github.com/Akshayykadam/PixelBoard) repository. |
-| `input/PixelBoard-v18.4.1-Stable-V7.apk` | Latest released PixelBoard APK, downloaded from the PixelBoard releases. |
+| `input/PixelBoard-v18.4.1-Stable-V7.apk` | Latest released PixelBoard APK, downloaded from the PixelBoard releases (used for the PoC script). |
 
 Tooling is resolved automatically: Java 21+, `kotlinc`, `d8`, `android.jar`, `APKEditor.jar` and
 the Morphe patcher jar (downloaded from the PixelBoard repository when the sibling checkout is
@@ -159,8 +159,8 @@ missing).
 ### Install
 
 ```bash
-./scripts/install.sh output/Gboard-com.sj010.gboard.apk
-./scripts/install.sh output/Gboard-PixelBoard-akshaykadam.apk --uninstall
+./scripts/install.sh output/Gboard-Clipboard-History.apk
+./scripts/install.sh output/PixelBoard-Clipboard-History.apk --uninstall
 ```
 
 `--uninstall` removes the previous package first, which is required when the signing
@@ -168,19 +168,15 @@ certificate differs (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`).
 
 ## Downloads
 
-Every release provides the patch bundle and the three patched APKs:
+Every release provides the patch bundle and pre-built APKs:
 
 | Asset | Format | Description |
 | :--- | :--- | :--- |
 | **patches-0.0.3-alpha.mpp** | Morphe Patch | Standalone patch bundle for use with Morphe Manager or CLI patcher. Targets Gboard and PixelBoard. |
-| **Gboard-com.sj010.gboard.apk** | Signed APK | Gboard + Clipboard History, package `com.sj010.gboard`. |
-| **Gboard-PixelBoard-akshaykadam.apk** | Signed APK | Gboard + PixelBoard + Clipboard History, package `com.akshaykadam.pixelboard`. |
-| **PixelBoard-clipboard-sj010.apk** | Signed APK | Released PixelBoard APK + Clipboard History, package `com.akshaykadam.pixelboard`. |
+| **Gboard-Clipboard-History.apk** | Signed APK | Standalone Gboard + Clipboard History (package `com.sj010.gboard`, installs side-by-side with stock Gboard). |
+| **PixelBoard-Clipboard-History.apk** | Signed APK | Gboard with PixelBoard theming + Clipboard History (package `com.akshaykadam.pixelboard`). |
 
 Download the files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.3-alpha) page.
-
-> The two `com.akshaykadam.pixelboard` APKs share the same package name, so only one of them can be
-> installed at a time.
 
 ## ContentProvider API
 

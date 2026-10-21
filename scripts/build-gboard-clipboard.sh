@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# App 1/3 - Gboard + Clipboard History (.mpp)
+# Standalone Gboard + Clipboard History (.mpp)
 #
 #   ./scripts/build-gboard-clipboard.sh
 #
 # Input : Gboard base APK (input/gboard-merged.apk, input/splits/ or $GBOARD_APK)
 # Patch : patches/GboardClipboardHistory.mpp
-# Output: output/Gboard-com.sj010.gboard.apk   (package com.sj010.gboard)
+# Output: output/Gboard-Clipboard-History.apk   (package com.sj010.gboard)
 #
 # Two stage build on purpose:
 #   stage 1  clipboard history on the stock package
@@ -30,7 +30,7 @@ log "patch bundle: $MPP_OUT"
 
 BASE_APK="$OUTPUT_DIR/A1-Gboard-clipboard-base.apk"
 RESULT1="$OUTPUT_DIR/result-gboard-clipboard-base.json"
-OUT_APK="$OUTPUT_DIR/Gboard-com.sj010.gboard.apk"
+OUT_APK="$OUTPUT_DIR/Gboard-Clipboard-History.apk"
 RESULT2="$OUTPUT_DIR/result-gboard-clipboard.json"
 
 log "stage 1/2: clipboard history"

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Build every patched APK in this repository.
+# Build patched APKs in this repository.
 #
 #   ./scripts/build-all.sh
 #
 #   1. patches/GboardClipboardHistory.mpp
-#   2. output/Gboard-com.sj010.gboard.apk           (Gboard + Clipboard History)
-#   3. output/Gboard-PixelBoard-akshaykadam.apk    (Gboard + PixelBoard + Clipboard History)
-#   4. output/PixelBoard-clipboard-sj010.apk       (released PixelBoard + Clipboard History)
+#   2. output/Gboard-Clipboard-History.apk      (Gboard + Clipboard History)
+#   3. output/PixelBoard-Clipboard-History.apk  (PixelBoard + Clipboard History)
+#   4. output/PixelBoard-clipboard-poc.apk      (PoC: direct patch of released APK)
 # ==============================================================================
 
 set -euo pipefail

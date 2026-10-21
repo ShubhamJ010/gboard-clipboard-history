@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# App 2/3 - Gboard + PixelBoard (.mpp) + Clipboard History (.mpp)
+# PixelBoard + Clipboard History (.mpp)
 #
 #   ./scripts/build-gboard-clipboard-pixelboard.sh
 #
 # Input : Gboard base APK + PixelBoard patch bundle (auto-downloaded)
-# Output: output/Gboard-PixelBoard-akshaykadam.apk (package com.akshaykadam.pixelboard)
+# Output: output/PixelBoard-Clipboard-History.apk (package com.akshaykadam.pixelboard)
 #
 # Two stage build on purpose:
 #   stage 1  Gboard + PixelBoard .mpp   -> package renamed to com.akshaykadam.pixelboard
@@ -30,7 +30,7 @@ log "patch bundle: $MPP_OUT"
 
 BASE_APK="$OUTPUT_DIR/B1-PixelBoard-base.apk"
 RESULT1="$OUTPUT_DIR/result-pixelboard-base.json"
-OUT_APK="$OUTPUT_DIR/Gboard-PixelBoard-akshaykadam.apk"
+OUT_APK="$OUTPUT_DIR/PixelBoard-Clipboard-History.apk"
 RESULT2="$OUTPUT_DIR/result-gboard-pixelboard-clipboard.json"
 
 log "stage 1/2: Gboard + PixelBoard .mpp (package rename)"
