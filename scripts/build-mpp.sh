@@ -23,6 +23,8 @@ done
 
 init_tools
 
+"$SCRIPTS_DIR/check-release-metadata.sh"
+
 KOTLINC_BIN="${KOTLINC_BIN:-$(find_kotlinc || true)}"
 [[ -n "$KOTLINC_BIN" ]] || die "kotlinc not found (set KOTLINC or install the sibling PixelBoard checkout)"
 [[ -n "$D8_BIN" ]]       || die "d8 not found (Android SDK build-tools)"
@@ -53,7 +55,7 @@ fi
 if [[ "$NEEDS_EXT_BUILD" == true ]]; then
     find "$EXT_SOURCES" -name "*.java" > "$BUILD_DIR/extension-sources.txt"
     rm -rf "$EXT_OUT/classes" && mkdir -p "$EXT_OUT/classes"
-    javac -nowarn -d "$EXT_OUT/classes" -cp "$ANDROID_JAR" "@$BUILD_DIR/extension-sources.txt"
+    javac -nowarn -encoding UTF-8 -d "$EXT_OUT/classes" -cp "$ANDROID_JAR" "@$BUILD_DIR/extension-sources.txt"
     jar cf "$EXT_OUT/ext.jar" -C "$EXT_OUT/classes" .
     "$D8_BIN" --release --min-api 29 --lib "$ANDROID_JAR" --output "$EXT_OUT" "$EXT_OUT/ext.jar"
     echo "    built $EXT_OUT/classes.dex"

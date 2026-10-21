@@ -45,6 +45,8 @@ if $UNINSTALL; then
 fi
 
 log "installing"
-"${ADB[@]}" install -r -g "$APK"
+# No -g here. Granting every runtime permission at install time is broader than
+# the app needs and hides the permission set the user actually agreed to.
+"${ADB[@]}" install -r "$APK"
 log "installed $PKG"
 "${ADB[@]}" shell pm list packages | grep -F "$PKG" || true

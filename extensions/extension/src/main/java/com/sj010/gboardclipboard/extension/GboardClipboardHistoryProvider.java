@@ -59,6 +59,8 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
                 return null;
             }
 
+            logAccess(context, uri.getPath());
+
             boolean includeSensitive = GboardClipboardHistorySettings.isSensitiveIncluded(context);
 
             if (match == MATCH_PRIMARY) {
@@ -96,6 +98,11 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         if (matcher == null) return null;
+        // The endpoints only exist while external access is on. Returning null
+        // keeps the provider from advertising itself to every app on the device.
+        if (!GboardClipboardHistorySettings.isExternalAccessEnabled(getContext())) {
+            return null;
+        }
         int match = matcher.match(uri);
         if (match == MATCH_CLIPS) return MIME_TYPE_CLIPS_DIR;
         if (match == MATCH_CLIP_ITEM) return MIME_TYPE_CLIP_ITEM;
@@ -154,6 +161,12 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
             return;
         }
         for (String permission : GboardClipboardHistorySettings.candidatePermissions(context)) {
+            // Only a permission that this build declares counts. A permission
+            // name is a global namespace, and another app can declare the same
+            // name with a weaker protection level before this app is installed.
+            if (!GboardClipboardHistorySettings.isPermissionDeclaredByHost(context, permission)) {
+                continue;
+            }
             if (context.checkPermission(permission, Binder.getCallingPid(), callingUid)
                     == PackageManager.PERMISSION_GRANTED) {
                 return;
@@ -163,9 +176,27 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
         if (GboardClipboardHistorySettings.isAccessTokenValid(context, token)) {
             return;
         }
-        throw new SecurityException("Unauthorized. Requires permission "
-                + GboardClipboardHistorySettings.resolvePermission(context)
-                + " or valid query parameter '?token=...'");
+        throw new SecurityException("Unauthorized caller. See the ContentProvider API section "
+                + "in the project README for the access rules.");
+    }
+
+    /**
+     * Writes one line per successful read so that the owner can tell who used
+     * the history.
+     */
+    private void logAccess(Context context, String endpoint) {
+        try {
+            int callingUid = Binder.getCallingUid();
+            if (callingUid == Process.myUid()) {
+                return;
+            }
+            String[] packages = context.getPackageManager().getPackagesForUid(callingUid);
+            String caller = packages != null && packages.length > 0
+                    ? packages[0]
+                    : "uid:" + callingUid;
+            Log.i(TAG, "clipboard history read: endpoint=" + endpoint + " caller=" + caller);
+        } catch (Throwable ignored) {
+        }
     }
 
     private static void appendRow(MatrixCursor cursor, GboardClipboardHistoryRepository.ClipboardEntry entry) {

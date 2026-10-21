@@ -22,9 +22,9 @@ It runs as a standalone patch and does not require other keyboard modifications.
   </a>
 </p>
 
-## Installation & Updates
+## Installation and updates
 
-### 1. Pre-built APKs via Obtainium (Recommended)
+### 1. Pre-built APKs via Obtainium (recommended)
 
 You can track and install automatic updates for pre-built APKs directly from GitHub releases via [Obtainium](https://github.com/ImranR98/Obtainium):
 
@@ -35,9 +35,9 @@ You can track and install automatic updates for pre-built APKs directly from Git
 
 ---
 
-### 2. Patch Bundle via Morphe Manager
+### 2. Patch bundle via Morphe Manager
 
-#### One-Click Import (Android)
+#### One-click import (Android)
 
 Tap the button below or link on an Android device where Morphe Manager is installed:
 
@@ -48,7 +48,7 @@ Tap the button below or link on an Android device where Morphe Manager is instal
 > [!NOTE]
 > If viewing on desktop, clicking the link displays a QR code to scan with your Android phone's camera.
 
-#### Manual Import
+#### Manual import
 
 1. Open **Morphe Manager** on your Android device.
 2. Tap **Sources** in the navigation bar.
@@ -63,17 +63,17 @@ Tap the button below or link on an Android device where Morphe Manager is instal
 
 ## Features
 
-- **In-app settings integration**: Placed cleanly inside `Gboard Settings -> Clipboard`. There is **no separate launcher icon** and no root settings clutter – the manager is only reachable from inside the keyboard clipboard settings.
+- **In-app settings integration**: Placed cleanly inside `Gboard Settings -> Clipboard`. There is **no separate launcher icon** and no root settings clutter. The manager is only reachable from inside the keyboard clipboard settings.
 - **PixelBoard Material 3 UI**: Clean Material 3 design with Monet dynamic theming (Android 12+), vector back navigation, relative timestamps, search, and image thumbnail previews.
 - **Foreground clipboard capture**: Hooks Gboard's active input view (`onStartInputView`) to capture primary clips and backfill missing entries.
 - **Coexistence with stock Gboard**: The optional *Package Rename to com.sj010.gboard* patch renames the keyboard package so it can be installed side by side with the official Gboard without a signature conflict.
 - **Database reader**: Reads Gboard's internal SQLite database (`gboard_clipboard.db`, `clips` table) directly from the application process.
 - **Background backfill**: Captures clips copied while another keyboard or application had focus once Gboard regains active input status.
 - **Text export**: Exports stored history to a text file using Android Storage Access Framework.
-- **Sensitive field toggle**: Controls whether entries copied from password fields are stored or shown.
+- **Sensitive field toggle**: Hides the entries that the copying app marked as sensitive. Off by default.
 - **ContentProvider API**: Exposes a read-only endpoint for automation tools, widgets, and companion apps.
 
-## Repository Structure
+## Repository structure
 
 ```
 gboard-clipboard-history/
@@ -98,6 +98,8 @@ gboard-clipboard-history/
 │   └── src/main/resources/                         # patches-list.json / patches-bundle.json
 ├── scripts/                       # All build / install scripts
 │   ├── lib/common.sh                              # Shared tool, input and patcher helpers
+│   ├── pins.env                                   # Pinned download URLs and sha256 digests
+│   ├── check-release-metadata.sh                  # Version and metadata consistency check
 │   ├── build-mpp.sh                               # Build patches/GboardClipboardHistory.mpp
 │   ├── build-gradle.sh                            # Gradle build of the bundle (needs GITHUB_TOKEN)
 │   ├── build-gboard-clipboard.sh                  # Build Gboard + Clipboard History APK
@@ -160,14 +162,52 @@ Tooling is resolved automatically: Java 21+, `kotlinc`, `d8`, `android.jar`, `AP
 the Morphe patcher jar (downloaded from the PixelBoard repository when the sibling checkout is
 missing).
 
+### Pinned downloads
+
+Every download is pinned in `scripts/pins.env` and checked against a sha256 digest. The build
+stops on a mismatch and keeps the bad file out of the output directory. The patcher jar URL points
+at a commit instead of a branch, so a moved branch cannot change the code that the build runs.
+
+To move a pin on purpose, download the new artifact, compare it with the source, then update the
+digest in `scripts/pins.env`.
+
+### Release metadata
+
+`gradle.properties` holds the version. `patches-list.json`, `patches-bundle.json` and the patch
+constants have to agree with it, otherwise a user installs a bundle that nobody reviewed.
+
+```bash
+./scripts/check-release-metadata.sh    # fails when the version or the copies drift apart
+```
+
+`scripts/build-mpp.sh` runs the check before it assembles the bundle, and the CI workflow runs it
+before it builds.
+
 ### Signing
 
 `SIGNING_KEY` selects the keystore:
 
 | Value | Keystore | Certificate |
 | :--- | :--- | :--- |
-| `pixelboard` (default) | sibling `PixelBoard/tools/patcher-data/pixelboard.keystore` | `CN=PixelBoard` – matches builds installed earlier |
-| `clipboard` | `tools/patcher-data/clipboard.keystore` | `CN=sj010` – generated on first use |
+| `clipboard` (default) | `tools/patcher-data/clipboard.keystore` | `CN=GboardClipboard`, generated on first use |
+| `pixelboard` | sibling `PixelBoard/tools/patcher-data/pixelboard.keystore` | `CN=PixelBoard`, matches builds installed before the key split |
+
+Keystore passwords stay out of the repository. The build reads the password in this order:
+
+1. `KEYSTORE_PASSWORD` in the environment
+2. the file named by `KEYSTORE_PASSWORD_FILE`
+3. `tools/patcher-data/keystore-<alias>.password`, a local file that Git does not track
+
+A missing keystore is created with a random password, and that password is written to the local
+file with 0600 permissions. Keep that file out of backups and out of CI logs. The key password can
+differ from the store password through `KEYSTORE_KEY_PASSWORD`.
+
+The default is the project's own key. Earlier builds were signed with the PixelBoard key, so
+installing a build signed with `clipboard` over one signed with `pixelboard` needs an uninstall
+first. That wipes the stored history, so pick the key before you install.
+
+A keyboard holds every keystroke and the whole clipboard. Keep the signing key separate from any
+other project and rotate it if the keystore file ever leaves the machine.
 
 ### Install
 
@@ -185,7 +225,7 @@ Every release provides the patch bundle and pre-built APKs:
 
 | Asset | Format | Obtainium | Description |
 | :--- | :--- | :--- | :--- |
-| **patches-0.0.3-alpha.mpp** | Morphe Patch | — | Standalone patch bundle for use with Morphe Manager or CLI patcher. Targets Gboard and PixelBoard. |
+| **patches-0.0.3-alpha.mpp** | Morphe Patch | n/a | Standalone patch bundle for use with Morphe Manager or CLI patcher. Targets Gboard and PixelBoard. |
 | **Gboard-Clipboard-History.apk** | Signed APK | [Add to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22com.sj010.gboard%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FShubhamJ010%2Fgboard-clipboard-history%22%2C%22author%22%3A%22ShubhamJ010%22%2C%22name%22%3A%22Gboard%20Clipboard%20History%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22releaseTitleAsVersion%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22releaseDateAsVersion%5C%22%3Afalse%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22Gboard-Clipboard-History.%2A%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22allowInsecure%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22%5C%22%2C%5C%22refreshBeforeDownload%5C%22%3Afalse%2C%5C%22includeZips%5C%22%3Afalse%2C%5C%22zippedApkFilterRegEx%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3Anull%7D) | Standalone Gboard + Clipboard History (package `com.sj010.gboard`, installs side-by-side with stock Gboard). |
 | **PixelBoard-Clipboard-History.apk** | Signed APK | [Add to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22com.akshaykadam.pixelboard%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FShubhamJ010%2Fgboard-clipboard-history%22%2C%22author%22%3A%22ShubhamJ010%22%2C%22name%22%3A%22PixelBoard%20Clipboard%20History%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22releaseTitleAsVersion%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Atrue%2C%5C%22releaseDateAsVersion%5C%22%3Afalse%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22PixelBoard-Clipboard-History.%2A%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22%5C%22%2C%5C%22shizukuPretendToBeGooglePlay%5C%22%3Afalse%2C%5C%22allowInsecure%5C%22%3Afalse%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22%5C%22%2C%5C%22refreshBeforeDownload%5C%22%3Afalse%2C%5C%22includeZips%5C%22%3Afalse%2C%5C%22zippedApkFilterRegEx%5C%22%3A%5C%22%5C%22%7D%22%2C%22overrideSource%22%3Anull%7D) | Gboard with PixelBoard theming + Clipboard History (package `com.akshaykadam.pixelboard`). |
 
@@ -193,15 +233,20 @@ Download the files from the [Releases](https://github.com/ShubhamJ010/gboard-cli
 
 ## ContentProvider API
 
-Other apps or automation scripts (Tasker, Termux, Automate) can read clipboard history via:
+Automation tools and companion apps read the history through a read only provider.
 
 - **URI**: `content://com.sj010.gboardclipboard.history/clips`
-- **Permission**: `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY` (signature protection level)
-- **Token fallback**: `content://com.sj010.gboardclipboard.history/clips?token=<access token>` – the token is shown in *Clipboard History -> Settings / API* and can be regenerated at any time
+- **Permission**: `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY` at signature protection level
+- **Token fallback**: `content://com.sj010.gboardclipboard.history/clips?token=<access token>`
 - **Columns**: `_id`, `text`, `html_text`, `item_type`, `entity_type`, `timestamp`, `sensitive`, `uri`, `group_id`
 - **Extra path**: `content://com.sj010.gboardclipboard.history/primary` returns the current primary clipboard entry
 
-External access is disabled by default and has to be enabled in *Clipboard History -> Settings / API*.
+External access is off by default. Turn it on in *Clipboard History -> Settings / API* before a
+companion app can read anything.
+
+The token is shown masked on screen and copied to the clipboard as a sensitive clip, so it does
+not land in the history as a normal entry. Regenerate it whenever it leaves your hands. The
+access rules and the rest of the security model are in [Security](#security).
 
 ### Authority per host package
 
@@ -216,6 +261,56 @@ scoped variant, while the reference build `com.sj010.gboard` keeps the documente
 
 The runtime reads the authority and the permission back from the package manager, so the URI shown
 in *Clipboard History -> Settings / API* always matches the manifest of the installed build.
+
+## Security
+
+The clipboard history is a secret store. It holds whatever the user copied, and that includes
+passwords and one time codes. The patch keeps the store closed until the owner opens it.
+
+### What protects the history
+
+| Control | Where |
+| :--- | :--- |
+| External access off by default | `GboardClipboardHistorySettings.isExternalAccessEnabled` |
+| Signature permission, scoped per host package | `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY` |
+| The permission has to be declared by the installed build | `GboardClipboardHistorySettings.isPermissionDeclaredByHost` |
+| 128 bit random token, constant time comparison | `GboardClipboardHistorySettings.generateAccessToken` |
+| Token masked on screen, screen capture blocked | `GboardClipboardHistoryActivity` |
+| Every read is logged with the caller package | `GboardClipboardHistoryProvider.logAccess` |
+| Read only provider, write calls throw | `GboardClipboardHistoryProvider` |
+
+A caller gets through in one of three ways. It holds the signature permission and the installed
+build declares that permission, it presents the access token, or it is the keyboard process
+itself.
+
+A permission name is a global namespace. An app that declares the same name first keeps that
+definition, and it can pick a weaker protection level. The provider looks up which package defines
+the permission before it accepts it, so a squatted name does not open the history.
+
+### Known limits
+
+These are open and worth knowing before you rely on the feature.
+
+- The history lives in the plain SQLite database `gboard_clipboard.db` that Gboard already uses.
+  Nothing is encrypted at rest and entries do not expire.
+- `android:allowBackup` is still true in the patched Gboard manifest, so the database and the
+  token preferences can end up in a backup.
+- Export writes plain text, and it includes sensitive entries when the sensitive toggle is on.
+- An entry counts as sensitive only when the app that copied it set the sensitive flag. Apps that
+  do not set it are stored like any other entry.
+- The backfill resolves `content://` items, so a URI copied from another app can pull that app's
+  content into the history.
+
+### Build and release security
+
+- Signing keys and their passwords stay out of the repository. See [Signing](#signing).
+- Every download is pinned and checked. See [Pinned downloads](#pinned-downloads).
+- The release workflow runs with read only permissions, writes only on a tag, and pins every
+  action to a commit.
+
+### Reporting a problem
+
+Use the private vulnerability advisory form on this repository, or read [SECURITY.md](SECURITY.md).
 
 ## Acknowledgements
 

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "0.0.3-alpha",
   "patches": [
     {
       "name": "Gboard Clipboard History",
@@ -20,30 +20,6 @@
           "18.0.0"
         ],
         "com.akshaykadam.pixelboard": [
-          "18.4.1.985164140-release-arm64-v8a",
-          "18.3.1.977415014-release-arm64-v8a",
-          "18.3.1.977415014-beta-arm64-v8a",
-          "18.0.3.954559732-release-arm64-v8a",
-          "18.4.1",
-          "18.3.1",
-          "18.2.0",
-          "18.1.0",
-          "18.0.3",
-          "18.0.0"
-        ],
-        "com.sj010.gboard": [
-          "18.4.1.985164140-release-arm64-v8a",
-          "18.3.1.977415014-release-arm64-v8a",
-          "18.3.1.977415014-beta-arm64-v8a",
-          "18.0.3.954559732-release-arm64-v8a",
-          "18.4.1",
-          "18.3.1",
-          "18.2.0",
-          "18.1.0",
-          "18.0.3",
-          "18.0.0"
-        ],
-        "com.sj010.pixelboard": [
           "18.4.1.985164140-release-arm64-v8a",
           "18.3.1.977415014-release-arm64-v8a",
           "18.3.1.977415014-beta-arm64-v8a",
