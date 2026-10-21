@@ -295,7 +295,10 @@ public final class GboardClipboardHistoryRepository {
         if (availableColumns.contains(COLUMN_GROUP_ID)) {
             values.putNull(COLUMN_GROUP_ID);
         }
-        return database.insertWithOnConflict(TABLE_CLIPS, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+        // CONFLICT_ABORT, not CONFLICT_REPLACE. A row id collision with a row
+        // that Gboard wrote itself must fail this insert. Replacing it would
+        // delete Gboard's own entry from the history database.
+        return database.insertWithOnConflict(TABLE_CLIPS, null, values, SQLiteDatabase.CONFLICT_ABORT);
     }
 
     private static long resolveNextRowId(SQLiteDatabase database, long timestamp) {

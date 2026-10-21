@@ -87,6 +87,44 @@ public final class GboardClipboardHistorySettings {
         return new String[]{scoped, PERMISSION_READ_CLIPBOARD_HISTORY};
     }
 
+    /**
+     * True when this app declares the given permission.
+     *
+     * Permission names live in a global namespace. Another app can declare the
+     * same name first, the platform keeps that first definition, and the
+     * declared protection level can then be weaker than the one this build
+     * asks for. A caller that holds such a permission would pass a plain
+     * check, so the definer has to be this package before a permission counts.
+     */
+    public static boolean isPermissionDeclaredByHost(Context context, String permissionName) {
+        if (context == null || permissionName == null || permissionName.isEmpty()) {
+            return false;
+        }
+        try {
+            android.content.pm.PermissionInfo info =
+                    context.getPackageManager().getPermissionInfo(permissionName, 0);
+            if (info == null) {
+                return false;
+            }
+            return context.getPackageName().equals(info.packageName);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /**
+     * Shortens a token for display. The full token is never rendered on screen.
+     */
+    public static String maskAccessToken(String token) {
+        if (token == null || token.isEmpty()) {
+            return "";
+        }
+        if (token.length() <= 8) {
+            return token;
+        }
+        return token.substring(0, 8) + "…";
+    }
+
     static final String PREF_FILE_NAME = "gboard_clipboard_history_prefs";
 
     static final String PREF_KEY_EXTERNAL_ACCESS_ENABLED =

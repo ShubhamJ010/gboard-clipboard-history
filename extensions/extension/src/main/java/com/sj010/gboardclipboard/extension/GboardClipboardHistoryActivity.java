@@ -3,6 +3,7 @@ package com.sj010.gboardclipboard.extension;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -30,6 +31,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PersistableBundle;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.util.Log;
@@ -41,6 +43,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.FrameLayout;
@@ -179,6 +182,10 @@ public final class GboardClipboardHistoryActivity extends Activity {
         }
         Window window = getWindow();
         window.setBackgroundDrawable(new ColorDrawable(palette.windowBackground));
+        // This screen shows the access token and the clip contents. Keep it out
+        // of screenshots, screen recordings and the recent apps preview.
+        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false);
             WindowInsetsController controller = window.getInsetsController();
@@ -583,10 +590,11 @@ public final class GboardClipboardHistoryActivity extends Activity {
         final String token = GboardClipboardHistorySettings.getAccessToken(this);
         rows.add(createCopyRow(
                 "Access token",
-                "Token: " + token,
-                "Tap to copy the token for a companion app.",
+                "Token: " + GboardClipboardHistorySettings.maskAccessToken(token),
+                "Tap to copy the token for a companion app. Anyone holding it can read the whole "
+                        + "history, so regenerate it when it leaks.",
                 true,
-                () -> copyTextToClipboard("Access token", token, "Access token copied.")));
+                () -> copyAccessTokenToClipboard(token)));
 
         rows.add(createCommandRow(
                 "Regenerate access token",
@@ -1101,6 +1109,34 @@ public final class GboardClipboardHistoryActivity extends Activity {
             }
         } catch (Throwable t) {
             Log.w(TAG, "Failed to copy to clipboard", t);
+        }
+    }
+
+    /**
+     * Copies the access token and marks the clip as sensitive.
+     *
+     * The token grants read access to the whole history, so it must not end up
+     * as a normal entry in the clipboard history or show up in a clipboard
+     * preview on the screen.
+     */
+    private void copyAccessTokenToClipboard(String token) {
+        if (token == null) {
+            return;
+        }
+        try {
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm == null) {
+                return;
+            }
+            ClipDescription description = new ClipDescription(
+                    "Access token", new String[]{ClipDescription.MIMETYPE_TEXT_PLAIN});
+            PersistableBundle extras = new PersistableBundle();
+            extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);
+            description.setExtras(extras);
+            cm.setPrimaryClip(new ClipData(description, new ClipData.Item(token)));
+            Toast.makeText(this, "Access token copied.", Toast.LENGTH_SHORT).show();
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to copy access token to clipboard", t);
         }
     }
 

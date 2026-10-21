@@ -17,6 +17,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 cd "$PROJECT_ROOT"
 
+"$SCRIPTS_DIR/check-release-metadata.sh"
+
 PATCH_VERSION=$(grep -E "^version\s*=" gradle.properties | cut -d'=' -f2 | tr -d ' ')
 MPP_PATH="$MPP_OUT"
 

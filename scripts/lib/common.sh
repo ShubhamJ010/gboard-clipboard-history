@@ -17,6 +17,9 @@ LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_DIR="$(cd "$LIB_DIR/.." && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPTS_DIR/.." && pwd)"
 
+# shellcheck source=../pins.env
+source "$SCRIPTS_DIR/pins.env"
+
 SIBLING_DIR="${SIBLING_DIR:-$PROJECT_ROOT/../PixelBoard}"
 INPUT_DIR="${INPUT_DIR:-$PROJECT_ROOT/input}"
 OUTPUT_DIR="${OUTPUT_DIR:-$PROJECT_ROOT/output}"
@@ -32,6 +35,40 @@ PIXELBOARD_MPP_TAG="${PIXELBOARD_MPP_TAG:-v18.4.1-Stable-V7}"
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
 warn() { printf '\033[1;33mWARN:\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31mERR:\033[0m %s\n' "$*" >&2; exit 1; }
+
+# ---------------------------------------------------------------- downloads ---
+# verify_sha256 <file> <expected>
+# Compares the digest of <file> with <expected>. Fails closed.
+verify_sha256() {
+    local file="$1" expected="$2" actual
+    [[ -f "$file" ]] || die "cannot verify missing file: $file"
+    actual="$(shasum -a 256 "$file" | awk '{print $1}')"
+    if [[ "$actual" != "$expected" ]]; then
+        die "checksum mismatch for $file
+     expected $expected
+     actual   $actual
+     Refusing to continue. Delete the file and retry, or update scripts/pins.env after checking the source."
+    fi
+}
+
+# download_pinned <url> <dest> <expected sha256>
+# Downloads to a temporary file, verifies the digest, then moves it into place.
+# A partial or tampered download never reaches <dest>.
+download_pinned() {
+    local url="$1" dest="$2" expected="$3" tmp
+    tmp="$dest.part"
+    rm -f "$tmp"
+    log "downloading $(basename "$dest")"
+    if ! curl -fL --retry 3 --proto '=https' --tlsv1.2 -o "$tmp" "$url"; then
+        rm -f "$tmp"
+        die "download failed: $url"
+    fi
+    if ! verify_sha256 "$tmp" "$expected"; then
+        rm -f "$tmp"
+        die "discarded download with unexpected digest: $url"
+    fi
+    mv -f "$tmp" "$dest"
+}
 
 # ---------------------------------------------------------------- java ------
 find_java() {
@@ -98,52 +135,123 @@ find_aapt2() {
 
 # Morphe patcher jar: prefer the local sibling checkout, fall back to the
 # upstream PixelBoard repository (tools/patcher.jar is tracked there).
+# The upstream URL points at a commit and the download is checked against a
+# pinned sha256, so a moved branch cannot feed code to the build.
 ensure_patcher_jar() {
     if [[ -f "$TOOLS_DIR/patcher.jar" ]]; then
+        verify_sha256 "$TOOLS_DIR/patcher.jar" "$PATCHER_JAR_SHA256"
         echo "$TOOLS_DIR/patcher.jar"; return 0
     fi
     if [[ -f "$SIBLING_DIR/tools/patcher.jar" ]]; then
         log "copying patcher.jar from $SIBLING_DIR/tools"
         mkdir -p "$TOOLS_DIR"
         cp "$SIBLING_DIR/tools/patcher.jar" "$TOOLS_DIR/patcher.jar"
+        verify_sha256 "$TOOLS_DIR/patcher.jar" "$PATCHER_JAR_SHA256"
         echo "$TOOLS_DIR/patcher.jar"; return 0
     fi
-    log "downloading patcher.jar from $PIXELBOARD_REPO"
     mkdir -p "$TOOLS_DIR"
-    curl -fL --retry 3 -o "$TOOLS_DIR/patcher.jar" \
-        "https://raw.githubusercontent.com/$PIXELBOARD_REPO/main/tools/patcher.jar" \
-        || die "cannot fetch patcher.jar"
+    download_pinned \
+        "https://raw.githubusercontent.com/$PIXELBOARD_REPO/$PATCHER_JAR_COMMIT/tools/patcher.jar" \
+        "$TOOLS_DIR/patcher.jar" \
+        "$PATCHER_JAR_SHA256"
     echo "$TOOLS_DIR/patcher.jar"
 }
 
-# -------------------------------------------------------------- keystore ----
-# SIGNING_KEY=clipboard -> repository keystore (CN=sj010)
-# SIGNING_KEY=pixelboard -> sibling PixelBoard keystore (same cert as older builds)
+# -------------------------------------------------------------- keystore ---
+# Keystore passwords are not stored in this repository. Resolution order:
+#   1. $KEYSTORE_PASSWORD                       (environment)
+#   2. $KEYSTORE_PASSWORD_FILE                  (file holding the password)
+#   3. $TOOLS_DIR/patcher-data/keystore-<alias>.password  (gitignored local file)
+# A missing keystore is created with a random password that is written to the
+# local password file with 0600 permissions.
+#
+# Signing key selection:
+#   SIGNING_KEY=clipboard   (default) own key, tools/patcher-data/clipboard.keystore
+#   SIGNING_KEY=pixelboard  legacy key shared with the PixelBoard project
+#
+# The two keys are separate on purpose. A keyboard holds every keystroke and
+# the full clipboard, so a leaked signing key must not be reusable by another
+# project. Switching between the two keys changes the app signature and the
+# system asks for an uninstall before the new build can be installed.
+LEGACY_PASSWORDS=("pixelboard" "clipboard" "password" "changeit")
+
+keystore_password_file_default() {
+    echo "$TOOLS_DIR/patcher-data/keystore-$1.password"
+}
+
+resolve_keystore_password() {
+    local alias="$1"
+    local fallback
+    fallback="$(keystore_password_file_default "$alias")"
+
+    if [[ -n "${KEYSTORE_PASSWORD:-}" ]]; then
+        KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD"
+        KEYSTORE_PASSWORD_SOURCE="environment"
+    elif [[ -n "${KEYSTORE_PASSWORD_FILE:-}" ]]; then
+        [[ -f "$KEYSTORE_PASSWORD_FILE" ]] \
+            || die "KEYSTORE_PASSWORD_FILE does not exist: $KEYSTORE_PASSWORD_FILE"
+        KEYSTORE_PASSWORD="$(head -n 1 "$KEYSTORE_PASSWORD_FILE" | tr -d '\r\n')"
+        KEYSTORE_PASSWORD_SOURCE="$KEYSTORE_PASSWORD_FILE"
+    elif [[ -f "$fallback" ]]; then
+        KEYSTORE_PASSWORD="$(head -n 1 "$fallback" | tr -d '\r\n')"
+        KEYSTORE_PASSWORD_SOURCE="$fallback"
+    else
+        KEYSTORE_PASSWORD=""
+        KEYSTORE_PASSWORD_SOURCE=""
+    fi
+
+    if [[ -z "$KEYSTORE_PASSWORD" && ! -f "$KEYSTORE_PATH" ]]; then
+        # Fresh keystore. Generate a random password and store it locally.
+        KEYSTORE_PASSWORD="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+        KEYSTORE_PASSWORD_SOURCE="$fallback (generated)"
+        mkdir -p "$(dirname "$fallback")"
+        (umask 077 && printf '%s\n' "$KEYSTORE_PASSWORD" > "$fallback")
+        log "generated a new keystore password, stored in $fallback"
+    fi
+
+    [[ -n "$KEYSTORE_PASSWORD" ]] \
+        || die "no password for keystore '$alias'. Set KEYSTORE_PASSWORD, point KEYSTORE_PASSWORD_FILE at a file, or create $fallback (chmod 600)."
+
+    log "keystore password for '$alias' comes from $KEYSTORE_PASSWORD_SOURCE"
+
+    local legacy
+    for legacy in "${LEGACY_PASSWORDS[@]}"; do
+        if [[ "$KEYSTORE_PASSWORD" == "$legacy" ]]; then
+            warn "keystore password for '$alias' is a well known default. Rotate it before publishing builds."
+            break
+        fi
+    done
+
+    KEYSTORE_KEY_PASSWORD="${KEYSTORE_KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+}
+
 resolve_keystore() {
-    local key="${SIGNING_KEY:-pixelboard}"
+    local key="${SIGNING_KEY:-clipboard}"
     case "$key" in
+        clipboard)
+            SIGNER_NAME="GboardClipboard"
+            KEYSTORE_PATH="${KEYSTORE_PATH:-$TOOLS_DIR/patcher-data/clipboard.keystore}"
+            KEYSTORE_ALIAS="clipboard"
+            ;;
         pixelboard)
             SIGNER_NAME="PixelBoard"
             KEYSTORE_PATH="${KEYSTORE_PATH:-$SIBLING_DIR/tools/patcher-data/pixelboard.keystore}"
-            KEYSTORE_PASSWORD="pixelboard"
             KEYSTORE_ALIAS="pixelboard"
             ;;
         *)
-            SIGNER_NAME="sj010"
-            KEYSTORE_PATH="${KEYSTORE_PATH:-$TOOLS_DIR/patcher-data/clipboard.keystore}"
-            KEYSTORE_PASSWORD="clipboard"
-            KEYSTORE_ALIAS="clipboard"
+            die "unknown SIGNING_KEY '$key' (expected clipboard or pixelboard)"
             ;;
     esac
+    resolve_keystore_password "$KEYSTORE_ALIAS"
     if [[ ! -f "$KEYSTORE_PATH" ]]; then
         log "generating keystore $KEYSTORE_PATH"
         mkdir -p "$(dirname "$KEYSTORE_PATH")"
-        keytool -genkeypair \
+        (umask 077 && keytool -genkeypair \
             -keystore "$KEYSTORE_PATH" -alias "$KEYSTORE_ALIAS" \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
+            -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_KEY_PASSWORD" \
             -dname "CN=$SIGNER_NAME, OU=Keyboard, O=OpenSource, L=Unknown, ST=Unknown, C=US" \
-            >/dev/null 2>&1
+            >/dev/null 2>&1)
     fi
 }
 
@@ -178,13 +286,14 @@ ensure_gboard_apk() {
 ensure_pixelboard_apk() {
     local target="$INPUT_DIR/PixelBoard-${PIXELBOARD_TAG}.apk"
     if [[ -f "$target" ]]; then
+        verify_sha256 "$target" "$PIXELBOARD_APK_SHA256"
         echo "$target"; return 0
     fi
     mkdir -p "$INPUT_DIR"
-    log "downloading PixelBoard APK ($PIXELBOARD_TAG)"
-    curl -fL --retry 3 -o "$target" \
+    download_pinned \
         "https://github.com/$PIXELBOARD_REPO/releases/download/$PIXELBOARD_TAG/PixelBoard-18.4.1-V7.apk" \
-        || die "cannot download PixelBoard APK"
+        "$target" \
+        "$PIXELBOARD_APK_SHA256"
     echo "$target"
 }
 
@@ -192,13 +301,14 @@ ensure_pixelboard_apk() {
 ensure_pixelboard_mpp() {
     local target="$INPUT_DIR/patches-1.2.0.mpp"
     if [[ -f "$target" ]]; then
+        verify_sha256 "$target" "$PIXELBOARD_MPP_SHA256"
         echo "$target"; return 0
     fi
     mkdir -p "$INPUT_DIR"
-    log "downloading PixelBoard .mpp ($PIXELBOARD_MPP_TAG)"
-    curl -fL --retry 3 -o "$target" \
+    download_pinned \
         "https://github.com/$PIXELBOARD_REPO/releases/download/$PIXELBOARD_MPP_TAG/patches-1.2.0.mpp" \
-        || die "cannot download PixelBoard .mpp"
+        "$target" \
+        "$PIXELBOARD_MPP_SHA256"
     echo "$target"
 }
 
@@ -215,7 +325,7 @@ run_patcher() {
         --keystore="$KEYSTORE_PATH" \
         --keystore-password="$KEYSTORE_PASSWORD" \
         --keystore-entry-alias="$KEYSTORE_ALIAS" \
-        --keystore-entry-password="$KEYSTORE_PASSWORD" \
+        --keystore-entry-password="$KEYSTORE_KEY_PASSWORD" \
         -t="$TOOLS_DIR/patcher-data/tmp" \
         --signer="$SIGNER_NAME" \
         -o="$out" \
