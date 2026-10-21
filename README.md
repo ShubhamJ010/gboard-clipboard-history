@@ -10,7 +10,7 @@ It runs as a standalone patch and does not require other keyboard modifications.
   </a>
   &nbsp;&nbsp;
   <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.3-alpha">
-    <img src="https://img.shields.io/badge/📦_Morphe_Patch_(.mpp)-v0.0.2--alpha-2979FF?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Morphe Patch (.mpp)"/>
+    <img src="https://img.shields.io/badge/📦_Morphe_Patch_(.mpp)-v0.0.3--alpha-2979FF?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Morphe Patch (.mpp)"/>
   </a>
   &nbsp;&nbsp;
   <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.3-alpha">
