@@ -4,7 +4,6 @@ import app.morphe.patcher.patch.ResourcePatchContext
 import app.morphe.patcher.patch.resourcePatch
 import org.w3c.dom.Element
 import org.w3c.dom.Node
-import java.io.File
 
 private const val GBOARD_PACKAGE_NAME = Constants.GBOARD_PACKAGE_NAME
 private const val RENAMED_PACKAGE_NAME = Constants.RENAMED_PACKAGE_NAME

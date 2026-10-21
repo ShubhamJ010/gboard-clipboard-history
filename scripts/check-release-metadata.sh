@@ -73,4 +73,52 @@ while IFS= read -r patch_name; do
 done < <(grep -rhoE '^    name = "[^"]+"' "$PROJECT_ROOT/patches/src/main/kotlin" \
     | sed 's/^    name = "//; s/"$//')
 
+# The runtime extension and the patches derive the provider authority and the
+# signature permission from the host package. They live in two languages and
+# two build systems, so the constants have to be compared here. A mismatch would
+# leave the manifest and the runtime pointing at two different providers.
+JAVA_SETTINGS="$PROJECT_ROOT/extensions/extension/src/main/java/com/sj010/gboardclipboard/extension/GboardClipboardHistorySettings.java"
+KOTLIN_CONSTANTS="$PROJECT_ROOT/patches/src/main/kotlin/com/sj010/gboardclipboard/patches/Constants.kt"
+
+java_constant() {
+    sed -n "/public static final String $1 =/,/;/p" "$JAVA_SETTINGS" \
+        | sed -n 's/.*"\([^"]*\)".*/\1/p' | head -1
+}
+
+kotlin_constant() {
+    tr '\n' ' ' < "$KOTLIN_CONSTANTS" \
+        | grep -o "const val $1 = *\"[^\"]*\"" | head -1 | sed 's/.*"\(.*\)"/\1/'
+}
+
+java_suffixes() {
+    sed -n 's/.*packageName + "\([^"]*\)".*/\1/p' "$JAVA_SETTINGS"
+}
+
+kotlin_authority_suffix() {
+    tr '\n' ' ' < "$KOTLIN_CONSTANTS" \
+        | grep -o '"\$packageName\.[a-z][a-z._]*"' | head -1 | sed 's/.*\$packageName\(.*\)"/\1/'
+}
+
+compare_identity() {
+    local java_value="$1" kotlin_value="$2" label="$3"
+    [[ -n "$java_value" && -n "$kotlin_value" ]] \
+        || fail "cannot read the $label from both the runtime extension and the patches"
+    [[ "$java_value" == "$kotlin_value" ]] \
+        || fail "the $label differs: the runtime extension says '$java_value', the patches say '$kotlin_value'"
+}
+
+compare_identity "$(java_constant PRIMARY_PACKAGE_NAME)" \
+    "$(kotlin_constant RENAMED_PACKAGE_NAME)" "reference package name"
+compare_identity "$(java_constant PROVIDER_AUTHORITY)" \
+    "$(kotlin_constant CLIPBOARD_PROVIDER_AUTHORITY)" "provider authority"
+compare_identity "$(java_constant PERMISSION_READ_CLIPBOARD_HISTORY)" \
+    "$(kotlin_constant CLIPBOARD_PERMISSION_NAME)" "signature permission"
+
+JAVA_PERMISSION_SUFFIX="$(java_suffixes | head -1)"
+JAVA_AUTHORITY_SUFFIX="$(java_suffixes | sed -n 2p)"
+compare_identity "$JAVA_PERMISSION_SUFFIX" \
+    "$(kotlin_constant CLIPBOARD_PERMISSION_NAME_SUFFIX)" "permission name suffix"
+compare_identity "$JAVA_AUTHORITY_SUFFIX" \
+    "$(kotlin_authority_suffix)" "authority suffix"
+
 printf 'release metadata OK (version %s)\n' "$VERSION"

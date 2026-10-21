@@ -87,6 +87,8 @@ gboard-clipboard-history/
 │           ├── GboardClipboardSyncRuntime.java         # Foreground input view sync
 │           └── GboardClipboardHistoryActivity.java     # PixelBoard Material 3 UI
 ├── patches/                       # Morphe bytecode and resource patch bundle
+│   ├── about.properties           # Bundle metadata, read by both build paths
+│   ├── build.gradle.kts           # Gradle build of the bundle
 │   └── src/main/kotlin/com/sj010/gboardclipboard/patches/
 │       ├── Constants.kt                            # Package names, targets, and URIs
 │       ├── XmlManifestUtils.kt                     # XML manipulation helpers
@@ -184,10 +186,17 @@ digest in `scripts/pins.env`.
 
 `gradle.properties` holds the version. `patches-list.json`, `patches-bundle.json` and the patch
 constants have to agree with it, otherwise a user installs a bundle that nobody reviewed.
+`patches/about.properties` holds the bundle name, description and links, and both build paths
+read it, so the Gradle build and the shell build cannot ship different metadata.
 
 ```bash
 ./scripts/check-release-metadata.sh    # fails when the version or the copies drift apart
 ```
+
+The check also verifies that every patch that the bundle ships is listed in
+`patches-list.json`, and that the provider authority and the signature permission that the
+runtime extension derives from the host package are the same ones that the patches write into
+the manifest.
 
 `scripts/build-mpp.sh` runs the check before it assembles the bundle, and the CI workflow runs it
 before it builds.

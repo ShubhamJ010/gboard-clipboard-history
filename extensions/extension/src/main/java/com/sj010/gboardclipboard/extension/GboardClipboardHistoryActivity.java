@@ -1220,44 +1220,34 @@ public final class GboardClipboardHistoryActivity extends Activity {
 
             if (context != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 try {
-                    int windowBackground;
-                    int surfaceAlt;
-                    int surfaceStroke;
-                    int infoContainer;
-                    int warningContainer;
-                    int textPrimary;
-                    int textSecondary;
-                    int textDisabled;
-                    int accent;
-                    int pressedOverlay;
-
-                    if (nightMode) {
-                        windowBackground = context.getColor(android.R.color.system_neutral1_900);
-                        surfaceAlt = context.getColor(android.R.color.system_neutral1_800);
-                        surfaceStroke = blendAlpha(context.getColor(android.R.color.system_neutral2_700), 0.35f);
-                        accent = context.getColor(android.R.color.system_accent1_200);
-                        textPrimary = context.getColor(android.R.color.system_neutral1_100);
-                        int rawSecondary = resolveThemeColor(context, android.R.attr.textColorSecondary,
-                                context.getColor(android.R.color.system_neutral2_200));
-                        textSecondary = blendAlpha(rawSecondary, 0.70f);
-                        textDisabled = blendAlpha(textSecondary, 0.45f);
-                        infoContainer = context.getColor(android.R.color.system_accent1_800);
-                        warningContainer = Color.parseColor("#3F2D16");
-                        pressedOverlay = blendAlpha(accent, 0.15f);
-                    } else {
-                        windowBackground = context.getColor(android.R.color.system_neutral1_50);
-                        surfaceAlt = Color.WHITE;
-                        surfaceStroke = blendAlpha(context.getColor(android.R.color.system_neutral2_200), 0.5f);
-                        accent = context.getColor(android.R.color.system_accent1_600);
-                        textPrimary = context.getColor(android.R.color.system_neutral1_900);
-                        int rawSecondary = resolveThemeColor(context, android.R.attr.textColorSecondary,
-                                context.getColor(android.R.color.system_neutral2_700));
-                        textSecondary = blendAlpha(rawSecondary, 0.72f);
-                        textDisabled = blendAlpha(textSecondary, 0.45f);
-                        infoContainer = context.getColor(android.R.color.system_accent1_100);
-                        warningContainer = Color.parseColor("#FEF3C7");
-                        pressedOverlay = blendAlpha(accent, 0.15f);
-                    }
+                    // One set of roles, two sets of system colors. The night mode
+                    // only picks the other resource, so the roles are defined once.
+                    int windowBackground = context.getColor(nightMode
+                            ? android.R.color.system_neutral1_900
+                            : android.R.color.system_neutral1_50);
+                    int surfaceAlt = nightMode
+                            ? context.getColor(android.R.color.system_neutral1_800)
+                            : Color.WHITE;
+                    int surfaceStroke = blendAlpha(context.getColor(nightMode
+                            ? android.R.color.system_neutral2_700
+                            : android.R.color.system_neutral2_200), nightMode ? 0.35f : 0.5f);
+                    int accent = context.getColor(nightMode
+                            ? android.R.color.system_accent1_200
+                            : android.R.color.system_accent1_600);
+                    int textPrimary = context.getColor(nightMode
+                            ? android.R.color.system_neutral1_100
+                            : android.R.color.system_neutral1_900);
+                    int rawSecondary = resolveThemeColor(context, android.R.attr.textColorSecondary,
+                            context.getColor(nightMode
+                                    ? android.R.color.system_neutral2_200
+                                    : android.R.color.system_neutral2_700));
+                    int textSecondary = blendAlpha(rawSecondary, nightMode ? 0.70f : 0.72f);
+                    int textDisabled = blendAlpha(textSecondary, 0.45f);
+                    int infoContainer = context.getColor(nightMode
+                            ? android.R.color.system_accent1_800
+                            : android.R.color.system_accent1_100);
+                    int warningContainer = Color.parseColor(nightMode ? "#3F2D16" : "#FEF3C7");
+                    int pressedOverlay = blendAlpha(accent, 0.15f);
 
                     return new Palette(
                             windowBackground, surfaceAlt, surfaceStroke,
