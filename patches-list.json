@@ -1,14 +1,8 @@
 {
   "version": "1.0.0",
-  "appNames": {
-    "com.google.android.inputmethod.latin": "Gboard",
-    "com.akshaykadam.pixelboard": "PixelBoard",
-    "com.sj010.gboard": "SJ Gboard",
-    "com.sj010.pixelboard": "SJ PixelBoard"
-  },
   "patches": [
     {
-      "name": "Clipboard History",
+      "name": "Gboard Clipboard History",
       "description": "Integrate persistent Clipboard History manager directly inside Keyboard Settings with ContentProvider and search/export.",
       "use": true,
       "dependencies": [],
@@ -62,80 +56,27 @@
           "18.0.0"
         ]
       },
-      "compatibility": [
-        {
-          "name": "Gboard",
-          "packageName": "com.google.android.inputmethod.latin",
-          "description": null,
-          "appIconColor": 2718207,
-          "targets": [
-            { "version": "18.4.1.985164140-release-arm64-v8a", "experimental": false },
-            { "version": "18.3.1.977415014-release-arm64-v8a", "experimental": false },
-            { "version": "18.3.1.977415014-beta-arm64-v8a", "experimental": false },
-            { "version": "18.0.3.954559732-release-arm64-v8a", "experimental": false },
-            { "version": "18.4.1", "experimental": false },
-            { "version": "18.3.1", "experimental": false },
-            { "version": "18.2.0", "experimental": false },
-            { "version": "18.1.0", "experimental": false },
-            { "version": "18.0.3", "experimental": false },
-            { "version": "18.0.0", "experimental": false }
-          ]
-        },
-        {
-          "name": "PixelBoard",
-          "packageName": "com.akshaykadam.pixelboard",
-          "description": null,
-          "appIconColor": 2718207,
-          "targets": [
-            { "version": "18.4.1.985164140-release-arm64-v8a", "experimental": false },
-            { "version": "18.3.1.977415014-release-arm64-v8a", "experimental": false },
-            { "version": "18.3.1.977415014-beta-arm64-v8a", "experimental": false },
-            { "version": "18.0.3.954559732-release-arm64-v8a", "experimental": false },
-            { "version": "18.4.1", "experimental": false },
-            { "version": "18.3.1", "experimental": false },
-            { "version": "18.2.0", "experimental": false },
-            { "version": "18.1.0", "experimental": false },
-            { "version": "18.0.3", "experimental": false },
-            { "version": "18.0.0", "experimental": false }
-          ]
-        },
-        {
-          "name": "SJ Gboard",
-          "packageName": "com.sj010.gboard",
-          "description": null,
-          "appIconColor": 2718207,
-          "targets": [
-            { "version": "18.4.1.985164140-release-arm64-v8a", "experimental": false },
-            { "version": "18.3.1.977415014-release-arm64-v8a", "experimental": false },
-            { "version": "18.3.1.977415014-beta-arm64-v8a", "experimental": false },
-            { "version": "18.0.3.954559732-release-arm64-v8a", "experimental": false },
-            { "version": "18.4.1", "experimental": false },
-            { "version": "18.3.1", "experimental": false },
-            { "version": "18.2.0", "experimental": false },
-            { "version": "18.1.0", "experimental": false },
-            { "version": "18.0.3", "experimental": false },
-            { "version": "18.0.0", "experimental": false }
-          ]
-        },
-        {
-          "name": "SJ PixelBoard",
-          "packageName": "com.sj010.pixelboard",
-          "description": null,
-          "appIconColor": 2718207,
-          "targets": [
-            { "version": "18.4.1.985164140-release-arm64-v8a", "experimental": false },
-            { "version": "18.3.1.977415014-release-arm64-v8a", "experimental": false },
-            { "version": "18.3.1.977415014-beta-arm64-v8a", "experimental": false },
-            { "version": "18.0.3.954559732-release-arm64-v8a", "experimental": false },
-            { "version": "18.4.1", "experimental": false },
-            { "version": "18.3.1", "experimental": false },
-            { "version": "18.2.0", "experimental": false },
-            { "version": "18.1.0", "experimental": false },
-            { "version": "18.0.3", "experimental": false },
-            { "version": "18.0.0", "experimental": false }
-          ]
-        }
-      ],
+      "options": []
+    },
+    {
+      "name": "Package Rename to com.sj010.gboard",
+      "description": "Rename Gboard package to com.sj010.gboard for coexistence alongside stock Gboard.",
+      "use": true,
+      "dependencies": [],
+      "compatiblePackages": {
+        "com.google.android.inputmethod.latin": [
+          "18.4.1.985164140-release-arm64-v8a",
+          "18.3.1.977415014-release-arm64-v8a",
+          "18.3.1.977415014-beta-arm64-v8a",
+          "18.0.3.954559732-release-arm64-v8a",
+          "18.4.1",
+          "18.3.1",
+          "18.2.0",
+          "18.1.0",
+          "18.0.3",
+          "18.0.0"
+        ]
+      },
       "options": []
     }
   ]

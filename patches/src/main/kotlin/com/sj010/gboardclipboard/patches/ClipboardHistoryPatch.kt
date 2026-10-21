@@ -7,6 +7,11 @@ import org.w3c.dom.Element
 
 private const val CLIPBOARD_ACTIVITY_CLASS =
     "com.sj010.gboardclipboard.extension.GboardClipboardHistoryActivity"
+private const val CLIPBOARD_PROVIDER_CLASS =
+    "com.sj010.gboardclipboard.extension.GboardClipboardHistoryProvider"
+private const val CLIPBOARD_PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history"
+private const val CLIPBOARD_PERMISSION_NAME =
+    "com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY"
 private const val GBOARD_SETTINGS_ACTIVITY_CLASS =
     "com.google.android.apps.inputmethod.latin.preference.SettingsActivity"
 private const val HEADER_PREFERENCE_TAG =
@@ -28,6 +33,11 @@ val clipboardHistoryPatch = resourcePatch(
         Constants.COMPATIBILITY_SJ010_GBOARD,
         Constants.COMPATIBILITY_SJ010_PIXELBOARD,
     )
+
+    // The runtime extension (activity + provider + repository) lives in a separate DEX.
+    // Without this dependency the carrier patch is never scheduled and the merged APK
+    // would reference classes that do not exist.
+    dependsOn(gboardClipboardCarrierPatch)
 
     execute {
         applyClipboardHistoryManifestModifications()
@@ -71,6 +81,15 @@ private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
             hasLauncher && hasMain
         }.toList()
         launcherFilters.forEach { activity.removeChild(it) }
+
+        // Expose the clipboard history to companion apps through a read-only provider.
+        // The authority intentionally does not depend on the host package name so the
+        // provider keeps a stable contract with or without the package rename patch.
+        ensureManifestPermission(doc, manifest, CLIPBOARD_PERMISSION_NAME)
+        val provider = ensureManifestComponent(doc, application, "provider", CLIPBOARD_PROVIDER_CLASS)
+        provider.setManifestAndroidAttribute("authorities", CLIPBOARD_PROVIDER_AUTHORITY)
+        provider.setManifestAndroidAttribute("exported", "true")
+        provider.setManifestAndroidAttribute("grantUriPermissions", "false")
 
         Unit
     }
@@ -138,6 +157,7 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
             }
         } catch (_: Throwable) {
         }
+        enforceIntentTargetPackage(path, packageName)
     }
 
     // 3. Also inject into Gboard -> Settings -> Clipboard (setting_clipboard.xml)
@@ -163,6 +183,38 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
             }
             intent.setManifestAndroidAttribute("targetClass", CLIPBOARD_ACTIVITY_CLASS)
             Unit
+        }
+    } catch (_: Throwable) {
+    }
+    enforceIntentTargetPackage("res/xml/setting_clipboard.xml", packageName)
+}
+
+/**
+ * Forces `android:targetPackage` of the clipboard history `<intent>` to [packageName].
+ *
+ * The resource patcher does not consistently flush DOM attribute mutations of the decoded
+ * preference documents back into the workspace, so the attribute is also enforced directly on
+ * the raw XML. This keeps the entry resolvable regardless of whether the package rename patch
+ * already ran or still has to run.
+ */
+context(context: ResourcePatchContext)
+private fun enforceIntentTargetPackage(path: String, packageName: String): Unit = with(context) {
+    if (packageName.isBlank()) return@with
+    try {
+        val file = get(path, false)
+        if (!file.exists()) return@with
+        val original = file.readText()
+        val intentRegex = Regex(
+            """<intent\b[^>]*targetClass="${Regex.escape(CLIPBOARD_ACTIVITY_CLASS)}"[^>]*/>""",
+        )
+        val updated = intentRegex.replace(original) { match ->
+            match.value.replace(
+                Regex("""targetPackage="[^"]*""""),
+                """targetPackage="$packageName"""",
+            )
+        }
+        if (updated != original) {
+            file.writeText(updated)
         }
     } catch (_: Throwable) {
     }

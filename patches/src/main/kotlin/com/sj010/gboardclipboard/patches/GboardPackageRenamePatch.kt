@@ -11,6 +11,17 @@ import java.io.File
 private const val GBOARD_PACKAGE_NAME = "com.google.android.inputmethod.latin"
 private const val RENAMED_PACKAGE_NAME = "com.sj010.gboard"
 
+/**
+ * Preference XML files that may embed `<intent>` elements pointing back at the host package.
+ * These have to follow the manifest rename, otherwise the preferences resolve to an activity
+ * that no longer exists in the renamed package.
+ */
+private val GBOARD_SETTINGS_XML_PATHS = listOf(
+    "res/xml/settings.xml",
+    "res/xml/settings_legacy.xml",
+    "res/xml/setting_clipboard.xml",
+)
+
 private data class PackageRenameMapping(
     val elementName: String,
     val namespaceUri: String?,
@@ -157,6 +168,13 @@ val gboardPackageRenamePatch = resourcePatch(
 
     execute {
         applyManifestPackageOverride()
+        rewriteSettingsTargetPackages()
+    }
+
+    // Runs after every `execute` block, so the preference documents are already patched
+    // with the clipboard history entry when the target package is normalized.
+    finalize {
+        rewriteSettingsTargetPackages()
     }
 }
 
@@ -229,6 +247,37 @@ private fun applyManifestPackageOverride(): Unit = with(context) {
     }
 
     sanitizeMissingSplitResources()
+}
+
+/**
+ * Rewrites `android:targetPackage` on every `<intent>` in the Gboard preference documents that
+ * still points at the original package name.
+ *
+ * The clipboard history preference is injected by a separate patch which may run before or after
+ * this one, so the rewrite is applied unconditionally (and for every target class) instead of
+ * only for the clipboard entry.
+ *
+ * The edit is performed on the raw file instead of through the DOM: the resource patcher does
+ * not reliably flush DOM mutations of these preference documents back into the decoded
+ * workspace, while a plain text rewrite is always picked up by the resource compiler.
+ */
+context(context: ResourcePatchContext)
+private fun rewriteSettingsTargetPackages(): Unit = with(context) {
+    for (path in GBOARD_SETTINGS_XML_PATHS) {
+        try {
+            val file = get(path, false)
+            if (!file.exists()) continue
+            val original = file.readText()
+            val updated = original.replace(
+                "targetPackage=\"$GBOARD_PACKAGE_NAME\"",
+                "targetPackage=\"$RENAMED_PACKAGE_NAME\"",
+            )
+            if (updated != original) {
+                file.writeText(updated)
+            }
+        } catch (_: Throwable) {
+        }
+    }
 }
 
 context(context: ResourcePatchContext)

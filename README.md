@@ -50,8 +50,8 @@ If the link does not open Morphe Manager automatically:
 
 ## Features
 
-- **Launcher icon**: Opens the clipboard viewer directly from the app drawer without navigating through system or keyboard settings.
-- **In-app settings integration**: Adds a "Clipboard History Manager" entry to `Gboard Settings -> Clipboard`.
+- **In-app settings integration**: Adds a "Clipboard History" entry to Gboard Settings and to `Gboard Settings -> Clipboard`. There is **no separate launcher icon** – the manager is only reachable from inside the keyboard settings.
+- **Coexistence with stock Gboard**: The optional *Package Rename to com.sj010.gboard* patch renames the keyboard package so it can be installed side by side with the official Gboard without a signature conflict.
 - **Database reader**: Reads Gboard's internal SQLite database (`gboard_clipboard.db`, `clips` table) directly from the application process.
 - **Background backfill**: Captures clips copied while another keyboard or application had focus once Gboard regains active input status.
 - **Text export**: Exports stored history to a text file using Android Storage Access Framework.
@@ -76,11 +76,34 @@ gboard-clipboard-history/
 │       ├── Constants.kt                            # Package names, targets, and URIs
 │       ├── XmlManifestUtils.kt                     # XML manipulation helpers
 │       ├── ClipboardCarrierPatch.kt                # Extension DEX injection
-│       └── ClipboardHistoryPatch.kt                # Manifest and layout injection
+│       ├── ClipboardHistoryPatch.kt                # Manifest, provider and settings injection
+│       └── GboardPackageRenamePatch.kt             # Package rename to com.sj010.gboard
+│   └── src/main/resources/                         # patches-list.json / patches-bundle.json
 ├── .github/workflows/build.yml    # CI build workflow
-├── build.sh                       # Local build script
+├── build.sh                       # Local build script (requires Morphe Gradle plugin)
+├── build-local.sh                 # Credential free local build & patch script
 ├── patches-bundle.json            # Morphe Manager repository metadata
 └── settings.gradle.kts            # Gradle settings and plugin configuration
+```
+
+## Building
+
+### `build-local.sh` (no GitHub token required)
+
+The Gradle build resolves the `app.morphe.patches` plugin from GitHub Packages and therefore
+needs a `GITHUB_TOKEN`. `build-local.sh` reproduces the same `.mpp` layout with local tooling
+only (`kotlinc` + `d8` + the Morphe patcher jar from the sibling `PixelBoard` checkout):
+
+```bash
+./build-local.sh                                   # build patches/GboardClipboardHistory.mpp
+./build-local.sh --patch /path/to/gboard.apk       # build + patch -> output/Gboard-com.sj010.gboard.apk
+./build-local.sh --rebuild-extension --patch ...   # also rebuild the runtime extension DEX
+```
+
+### `build.sh` / Gradle
+
+```bash
+./gradlew :patches:buildAndroid -Pgpr.user=<user> -Pgpr.key=<token>
 ```
 
 ## Downloads
@@ -97,8 +120,12 @@ Download both files from the [Releases](https://github.com/ShubhamJ010/gboard-cl
 Other apps or automation scripts (Tasker, Termux, Automate) can read clipboard history via:
 
 - **URI**: `content://com.sj010.gboardclipboard.history/clips`
-- **Permission**: `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY` (normal protection level)
-- **Columns**: `_id`, `text`, `timestamp`, `is_pinned`
+- **Permission**: `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY` (signature protection level)
+- **Token fallback**: `content://com.sj010.gboardclipboard.history/clips?token=<access token>` – the token is shown in *Clipboard History -> Settings / API* and can be regenerated at any time
+- **Columns**: `_id`, `text`, `html_text`, `item_type`, `entity_type`, `timestamp`, `sensitive`, `uri`, `group_id`
+- **Extra path**: `content://com.sj010.gboardclipboard.history/primary` returns the current primary clipboard entry
+
+External access is disabled by default and has to be enabled in *Clipboard History -> Settings / API*.
 
 ## License
 

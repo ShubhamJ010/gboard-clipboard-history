@@ -1,7 +1,7 @@
 {
-  "version": "0.0.1-alpha",
-  "created_at": "2026-10-20T22:42:00",
-  "description": "Standalone clipboard history manager for Gboard with search, export, launcher icon, and ContentProvider API.",
-  "download_url": "https://github.com/ShubhamJ010/gboard-clipboard-history/releases/download/0.0.1-alpha/patches-1.0.0.mpp",
+  "version": "1.0.0",
+  "created_at": "2026-10-21T14:00:00",
+  "description": "### Gboard Clipboard History (v1.0.0)\n\n* **Native Gboard integration**: Clipboard History manager opens straight from Keyboard Settings (no separate launcher icon)\n* **Package coexistence**: Optional rename to com.sj010.gboard so it installs side by side with stock Gboard\n* **Read-only ContentProvider**: Companion apps can read the history through content://com.sj010.gboardclipboard.history/clips\n\nSupports Gboard v18.4.1 (Release), v18.3.1 (Release / Beta) and v18.0.3 (Release).",
+  "download_url": "https://github.com/ShubhamJ010/gboard-clipboard-history/releases/download/1.0.0/patches-1.0.0.mpp",
   "signature_download_url": ""
 }
