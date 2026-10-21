@@ -597,7 +597,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
                     renderAll();
                 }));
 
-        final String providerUri = "content://" + GboardClipboardHistoryProvider.AUTHORITY;
+        final String providerUri = "content://" + GboardClipboardHistorySettings.resolveAuthority(this);
         rows.add(createCopyRow(
                 "Provider URI",
                 providerUri,
@@ -612,7 +612,7 @@ public final class GboardClipboardHistoryActivity extends Activity {
 
         rows.add(createDetailRow(
                 "Permission",
-                GboardClipboardHistorySettings.PERMISSION_READ_CLIPBOARD_HISTORY,
+                GboardClipboardHistorySettings.resolvePermission(this),
                 true));
 
         return createSectionView(

@@ -9,9 +9,11 @@ private const val CLIPBOARD_ACTIVITY_CLASS =
     "com.sj010.gboardclipboard.extension.GboardClipboardHistoryActivity"
 private const val CLIPBOARD_PROVIDER_CLASS =
     "com.sj010.gboardclipboard.extension.GboardClipboardHistoryProvider"
-private const val CLIPBOARD_PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history"
-private const val CLIPBOARD_PERMISSION_NAME =
+private const val PRIMARY_PACKAGE_NAME = "com.sj010.gboard"
+private const val DEFAULT_CLIPBOARD_PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history"
+private const val DEFAULT_CLIPBOARD_PERMISSION_NAME =
     "com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY"
+private const val PERMISSION_NAME_SUFFIX = ".permission.READ_CLIPBOARD_HISTORY"
 private const val GBOARD_SETTINGS_ACTIVITY_CLASS =
     "com.google.android.apps.inputmethod.latin.preference.SettingsActivity"
 private const val HEADER_PREFERENCE_TAG =
@@ -22,6 +24,26 @@ private val GBOARD_SETTINGS_PATHS = listOf(
     "res/xml/settings.xml",
     "res/xml/settings_legacy.xml",
 )
+
+/**
+ * The provider authority and the signature permission live in global namespaces.
+ * Two patched keyboards installed side by side would clash on them, so every host
+ * package other than the reference build gets its own scoped variant. The
+ * reference build keeps the documented names.
+ */
+private fun providerAuthorityFor(packageName: String): String =
+    if (packageName.isBlank() || packageName == PRIMARY_PACKAGE_NAME) {
+        DEFAULT_CLIPBOARD_PROVIDER_AUTHORITY
+    } else {
+        "$packageName.gboardclipboard.history"
+    }
+
+private fun permissionNameFor(packageName: String): String =
+    if (packageName.isBlank() || packageName == PRIMARY_PACKAGE_NAME) {
+        DEFAULT_CLIPBOARD_PERMISSION_NAME
+    } else {
+        "$packageName$PERMISSION_NAME_SUFFIX"
+    }
 
 val clipboardHistoryPatch = resourcePatch(
     name = "Gboard Clipboard History",
@@ -43,6 +65,13 @@ val clipboardHistoryPatch = resourcePatch(
         applyClipboardHistoryManifestModifications()
         applyClipboardSettingsXmlModifications()
     }
+
+    // The package rename patch rewrites the manifest package in its own execute
+    // phase, so the authority and permission are (re)computed here, once the
+    // final host package is known.
+    finalize {
+        applyClipboardHistoryManifestModifications()
+    }
 }
 
 context(context: ResourcePatchContext)
@@ -50,6 +79,9 @@ private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
     document("AndroidManifest.xml").use { doc ->
         val manifest = doc.documentElement
         val application = manifest.childElements("application").firstOrNull() ?: return@use
+        val packageName = manifest.getAttribute("package") ?: ""
+        val providerAuthority = providerAuthorityFor(packageName)
+        val permissionName = permissionNameFor(packageName)
 
         // Find or create GboardClipboardHistoryActivity declaration
         val activity = application.childElements("activity").firstOrNull {
@@ -83,15 +115,34 @@ private fun applyClipboardHistoryManifestModifications(): Unit = with(context) {
         launcherFilters.forEach { activity.removeChild(it) }
 
         // Expose the clipboard history to companion apps through a read-only provider.
-        // The authority intentionally does not depend on the host package name so the
-        // provider keeps a stable contract with or without the package rename patch.
-        ensureManifestPermission(doc, manifest, CLIPBOARD_PERMISSION_NAME)
+        // The authority is scoped to the host package so that several patched
+        // keyboards can be installed side by side.
+        removeStaleClipboardPermissions(doc, manifest, permissionName)
+        ensureManifestPermission(doc, manifest, permissionName)
         val provider = ensureManifestComponent(doc, application, "provider", CLIPBOARD_PROVIDER_CLASS)
-        provider.setManifestAndroidAttribute("authorities", CLIPBOARD_PROVIDER_AUTHORITY)
+        provider.setManifestAndroidAttribute("authorities", providerAuthority)
         provider.setManifestAndroidAttribute("exported", "true")
         provider.setManifestAndroidAttribute("grantUriPermissions", "false")
 
         Unit
+    }
+}
+
+/**
+ * Drops clipboard history permission declarations that were created for an
+ * earlier host package name (for example the pre-rename Gboard package).
+ */
+context(context: ResourcePatchContext)
+private fun removeStaleClipboardPermissions(
+    doc: Document,
+    manifest: Element,
+    keepPermissionName: String,
+): Unit = with(context) {
+    manifest.childElements("permission").filter { permission ->
+        val name = permission.manifestAndroidAttribute("name") ?: return@filter false
+        name != keepPermissionName && name.endsWith(PERMISSION_NAME_SUFFIX)
+    }.toList().forEach { permission ->
+        permission.parentNode?.removeChild(permission)
     }
 }
 

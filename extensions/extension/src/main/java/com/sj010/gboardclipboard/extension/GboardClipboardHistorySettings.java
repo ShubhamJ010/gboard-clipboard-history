@@ -8,8 +8,85 @@ import java.security.SecureRandom;
 
 public final class GboardClipboardHistorySettings {
 
+    /**
+     * Authority and permission of the reference build ({@code com.sj010.gboard}).
+     * Every other host package gets its own scoped variant so that multiple
+     * patched keyboards can be installed side by side without clashing on the
+     * global provider authority.
+     */
+    public static final String PRIMARY_PACKAGE_NAME = "com.sj010.gboard";
+
     public static final String PERMISSION_READ_CLIPBOARD_HISTORY =
             "com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY";
+
+    public static final String PROVIDER_AUTHORITY = "com.sj010.gboardclipboard.history";
+
+    public static String permissionForPackage(String packageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            return PERMISSION_READ_CLIPBOARD_HISTORY;
+        }
+        if (PRIMARY_PACKAGE_NAME.equals(packageName)) {
+            return PERMISSION_READ_CLIPBOARD_HISTORY;
+        }
+        return packageName + ".permission.READ_CLIPBOARD_HISTORY";
+    }
+
+    public static String authorityForPackage(String packageName) {
+        if (packageName == null || packageName.isEmpty()) {
+            return PROVIDER_AUTHORITY;
+        }
+        if (PRIMARY_PACKAGE_NAME.equals(packageName)) {
+            return PROVIDER_AUTHORITY;
+        }
+        return packageName + ".gboardclipboard.history";
+    }
+
+    /**
+     * Resolves the authority that the manifest actually declares for this
+     * provider. Reading it back from the package manager keeps the runtime URI
+     * and the manifest in sync no matter which patch order produced the APK.
+     */
+    public static String resolveAuthority(Context context) {
+        if (context == null) {
+            return PROVIDER_AUTHORITY;
+        }
+        try {
+            android.content.pm.ProviderInfo info = context.getPackageManager().getProviderInfo(
+                    new android.content.pm.ComponentName(context, GboardClipboardHistoryProvider.class),
+                    0);
+            if (info != null && info.authority != null && !info.authority.isEmpty()) {
+                return info.authority;
+            }
+        } catch (Throwable ignored) {
+        }
+        return authorityForPackage(context.getPackageName());
+    }
+
+    /**
+     * Resolves the signature permission this build declares for external
+     * clipboard access.
+     */
+    public static String resolvePermission(Context context) {
+        if (context == null) {
+            return PERMISSION_READ_CLIPBOARD_HISTORY;
+        }
+        try {
+            String[] declared = context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), android.content.pm.PackageManager.GET_PERMISSIONS)
+                    .permissions;
+            if (declared != null) {
+                for (String permission : declared) {
+                    if (permission != null && permission.endsWith(PERMISSION_NAME_SUFFIX)) {
+                        return permission;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return permissionForPackage(context.getPackageName());
+    }
+
+    private static final String PERMISSION_NAME_SUFFIX = ".permission.READ_CLIPBOARD_HISTORY";
 
     static final String PREF_FILE_NAME = "gboard_clipboard_history_prefs";
 

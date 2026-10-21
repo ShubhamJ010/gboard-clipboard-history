@@ -88,6 +88,14 @@ find_apkeditor() {
     return 1
 }
 
+find_aapt2() {
+    local sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
+    local bin
+    bin=$(ls -1 "$sdk"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1 || true)
+    [[ -n "$bin" ]] && { echo "$bin"; return 0; }
+    return 1
+}
+
 # Morphe patcher jar: prefer the local sibling checkout, fall back to the
 # upstream PixelBoard repository (tools/patcher.jar is tracked there).
 ensure_patcher_jar() {

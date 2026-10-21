@@ -128,6 +128,10 @@ Output: `patches/GboardClipboardHistory.mpp`.
 | `build-gboard-clipboard-pixelboard.sh` | Gboard base + PixelBoard `.mpp` | `output/Gboard-PixelBoard-akshaykadam.apk` | `com.akshaykadam.pixelboard` |
 | `build-pixelboard-clipboard.sh` | released PixelBoard APK | `output/PixelBoard-clipboard-sj010.apk` | `com.akshaykadam.pixelboard` |
 
+The first two scripts run the patcher twice on purpose: the package rename has to be finished
+before the clipboard history patch runs, because the provider authority and the signature
+permission are derived from the final host package name.
+
 ### Build inputs
 
 Inputs live in `input/` (git ignored, they are too large for GitHub). The scripts download what
@@ -184,6 +188,20 @@ Other apps or automation scripts (Tasker, Termux, Automate) can read clipboard h
 - **Extra path**: `content://com.sj010.gboardclipboard.history/primary` returns the current primary clipboard entry
 
 External access is disabled by default and has to be enabled in *Clipboard History -> Settings / API*.
+
+### Authority per host package
+
+The provider authority and the signature permission live in global namespaces, so two patched
+keyboards installed side by side would clash on them. Every host package therefore gets its own
+scoped variant, while the reference build `com.sj010.gboard` keeps the documented names:
+
+| Host package | Authority | Permission |
+| :--- | :--- | :--- |
+| `com.sj010.gboard` | `com.sj010.gboardclipboard.history` | `com.sj010.gboardclipboard.permission.READ_CLIPBOARD_HISTORY` |
+| `com.akshaykadam.pixelboard` | `com.akshaykadam.pixelboard.gboardclipboard.history` | `com.akshaykadam.pixelboard.permission.READ_CLIPBOARD_HISTORY` |
+
+The runtime reads the authority and the permission back from the package manager, so the URI shown
+in *Clipboard History -> Settings / API* always matches the manifest of the installed build.
 
 ## License
 

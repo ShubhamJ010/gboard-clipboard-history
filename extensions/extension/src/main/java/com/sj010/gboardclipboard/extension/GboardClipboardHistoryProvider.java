@@ -21,8 +21,7 @@ import java.util.List;
 public final class GboardClipboardHistoryProvider extends ContentProvider {
 
     public static final String AUTHORITY = "com.sj010.gboardclipboard.history";
-    public static final String PATH_CLIPS = "clips";
-    public static final String PATH_PRIMARY = "primary";
+    public static final String PATH_CLIPS = "clips";    public static final String PATH_PRIMARY = "primary";
     public static final String QUERY_PARAM_TOKEN = "token";
 
     public static final String MIME_TYPE_CLIPS_DIR = "vnd.android.cursor.dir/clips";
@@ -38,10 +37,12 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        Context context = getContext();
+        String authority = GboardClipboardHistorySettings.resolveAuthority(context);
         matcher = new UriMatcher(UriMatcher.NO_MATCH);
-        matcher.addURI(AUTHORITY, PATH_CLIPS, MATCH_CLIPS);
-        matcher.addURI(AUTHORITY, PATH_CLIPS + "/#", MATCH_CLIP_ITEM);
-        matcher.addURI(AUTHORITY, PATH_PRIMARY, MATCH_PRIMARY);
+        matcher.addURI(authority, PATH_CLIPS, MATCH_CLIPS);
+        matcher.addURI(authority, PATH_CLIPS + "/#", MATCH_CLIP_ITEM);
+        matcher.addURI(authority, PATH_PRIMARY, MATCH_PRIMARY);
         return true;
     }
 
@@ -152,7 +153,7 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
         if (callingUid == Process.myUid()) {
             return;
         }
-        if (context.checkPermission(GboardClipboardHistorySettings.PERMISSION_READ_CLIPBOARD_HISTORY,
+        if (context.checkPermission(GboardClipboardHistorySettings.resolvePermission(context),
                 Binder.getCallingPid(), callingUid) == PackageManager.PERMISSION_GRANTED) {
             return;
         }
@@ -161,7 +162,7 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
             return;
         }
         throw new SecurityException("Unauthorized. Requires permission "
-                + GboardClipboardHistorySettings.PERMISSION_READ_CLIPBOARD_HISTORY
+                + GboardClipboardHistorySettings.resolvePermission(context)
                 + " or valid query parameter '?token=...'");
     }
 

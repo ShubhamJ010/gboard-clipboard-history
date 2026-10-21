@@ -33,8 +33,8 @@ done
 ADB=(adb)
 [[ -n "$DEVICE" ]] && ADB=(adb -s "$DEVICE")
 
-PKG=$("${AAPT:-}" dump badging "$APK" 2>/dev/null | head -1 | sed -E "s/.*name='([^']+)'.*/\1/" || true)
-[[ -n "$PKG" ]] || die "cannot read package name from $APK"
+PKG=$("${AAPT2:-$(find_aapt2 || true)}" dump badging "$APK" 2>/dev/null | head -1 | sed -E "s/^package: name='([^']+)'.*/\1/" || true)
+[[ -n "$PKG" ]] || die "cannot read package name from $APK (aapt2 not found)"
 
 log "apk    : $APK"
 log "package: $PKG"
