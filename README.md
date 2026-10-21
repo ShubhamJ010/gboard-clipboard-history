@@ -9,12 +9,12 @@ It runs as a standalone patch and does not require other keyboard modifications.
     <img src="https://img.shields.io/badge/Add_to-Morphe-1E88E5?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Add to Morphe"/>
   </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.1-alpha">
-    <img src="https://img.shields.io/badge/📦_Morphe_Patch_(.mpp)-v0.0.1--alpha_(676_KB)-2979FF?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Morphe Patch (.mpp)"/>
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.2-alpha">
+    <img src="https://img.shields.io/badge/📦_Morphe_Patch_(.mpp)-v0.0.2--alpha-2979FF?style=for-the-badge&logo=android&logoColor=white" height="40" alt="Download Morphe Patch (.mpp)"/>
   </a>
   &nbsp;&nbsp;
-  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.1-alpha">
-    <img src="https://img.shields.io/badge/📥_Release-0.0.1--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.1-alpha"/>
+  <a href="https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.2-alpha">
+    <img src="https://img.shields.io/badge/📥_Release-0.0.2--alpha-00C853?style=for-the-badge&logo=github&logoColor=white" height="40" alt="Release 0.0.2-alpha"/>
   </a>
 </p>
 
@@ -50,7 +50,9 @@ If the link does not open Morphe Manager automatically:
 
 ## Features
 
-- **In-app settings integration**: Adds a "Clipboard History" entry to Gboard Settings and to `Gboard Settings -> Clipboard`. There is **no separate launcher icon** – the manager is only reachable from inside the keyboard settings.
+- **In-app settings integration**: Placed cleanly inside `Gboard Settings -> Clipboard`. There is **no separate launcher icon** and no root settings clutter – the manager is only reachable from inside the keyboard clipboard settings.
+- **PixelBoard Material 3 UI**: Clean Material 3 design with Monet dynamic theming (Android 12+), vector back navigation, relative timestamps, search, and image thumbnail previews.
+- **Foreground clipboard capture**: Hooks Gboard's active input view (`onStartInputView`) to capture primary clips and backfill missing entries.
 - **Coexistence with stock Gboard**: The optional *Package Rename to com.sj010.gboard* patch renames the keyboard package so it can be installed side by side with the official Gboard without a signature conflict.
 - **Database reader**: Reads Gboard's internal SQLite database (`gboard_clipboard.db`, `clips` table) directly from the application process.
 - **Background backfill**: Captures clips copied while another keyboard or application had focus once Gboard regains active input status.
@@ -69,7 +71,8 @@ gboard-clipboard-history/
 │           ├── GboardClipboardHistorySettings.java     # Preference persistence
 │           ├── GboardClipboardHistoryProvider.java     # ContentProvider implementation
 │           ├── GboardClipboardBackfill.java            # Clipboard listener and backfill
-│           └── GboardClipboardHistoryActivity.java     # Management UI
+│           ├── GboardClipboardSyncRuntime.java         # Foreground input view sync
+│           └── GboardClipboardHistoryActivity.java     # PixelBoard Material 3 UI
 │       └── src/main/res/                               # Vector assets and strings
 ├── patches/                       # Morphe bytecode and resource patch bundle
 │   └── src/main/kotlin/com/sj010/gboardclipboard/patches/
@@ -77,6 +80,7 @@ gboard-clipboard-history/
 │       ├── XmlManifestUtils.kt                     # XML manipulation helpers
 │       ├── ClipboardCarrierPatch.kt                # Extension DEX injection
 │       ├── ClipboardHistoryPatch.kt                # Manifest, provider and settings injection
+│       ├── GboardClipboardSyncPatch.kt             # onStartInputView foreground hook
 │       └── GboardPackageRenamePatch.kt             # Package rename to com.sj010.gboard
 │   └── src/main/resources/                         # patches-list.json / patches-bundle.json
 ├── .github/workflows/build.yml    # CI build workflow
@@ -108,12 +112,14 @@ only (`kotlinc` + `d8` + the Morphe patcher jar from the sibling `PixelBoard` ch
 
 ## Downloads
 
+Every release provides exactly two assets:
+
 | Package | Format | Description |
 | :--- | :--- | :--- |
-| **Gboard Clipboard Edition APK** | Signed APK | Standalone patched keyboard package with clipboard history pre-integrated. |
-| **patches-1.0.0.mpp** | Morphe Patch | Patch bundle for use with Morphe Manager or CLI patcher. |
+| **Gboard-com.sj010.gboard.apk** | Signed APK | Standalone patched keyboard package with clipboard history pre-integrated. |
+| **patches-0.0.2-alpha.mpp** | Morphe Patch | Standalone patch bundle for use with Morphe Manager or CLI patcher. |
 
-Download both files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.1-alpha) page.
+Download both files from the [Releases](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/0.0.2-alpha) page.
 
 ## ContentProvider API
 
