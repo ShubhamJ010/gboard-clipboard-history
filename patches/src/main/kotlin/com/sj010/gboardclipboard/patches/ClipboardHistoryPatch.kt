@@ -148,19 +148,13 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
     } catch (_: Throwable) {
     }
 
-    // 2. Inject into main Settings screens (settings.xml, settings_legacy.xml)
+    // 2. Clean up from root settings screens (settings.xml, settings_legacy.xml)
+    // As per user directive: Keep "Clipboard history" only in the Clipboard settings section.
     GBOARD_SETTINGS_PATHS.forEach { path ->
-        try {
-            document(path).use { doc ->
-                injectIntoSettingsRoot(doc, packageName)
-                Unit
-            }
-        } catch (_: Throwable) {
-        }
-        enforceIntentTargetPackage(path, packageName)
+        removeClipboardPrefFromSettings(path)
     }
 
-    // 3. Also inject into Gboard -> Settings -> Clipboard (setting_clipboard.xml)
+    // 3. Inject only into Gboard -> Settings -> Clipboard (setting_clipboard.xml)
     try {
         document("res/xml/setting_clipboard.xml").use { doc ->
             val root = doc.documentElement
@@ -187,6 +181,45 @@ private fun applyClipboardSettingsXmlModifications(): Unit = with(context) {
     } catch (_: Throwable) {
     }
     enforceIntentTargetPackage("res/xml/setting_clipboard.xml", packageName)
+}
+
+/**
+ * Removes the clipboard history preference from a settings file if present.
+ */
+context(context: ResourcePatchContext)
+private fun removeClipboardPrefFromSettings(path: String): Unit = with(context) {
+    try {
+        document(path).use { doc ->
+            val root = doc.documentElement
+            val elements = root.childElements().flatMap { parent ->
+                if (parent.tagName == "androidx.preference.PreferenceCategory") {
+                    parent.childElements()
+                } else {
+                    sequenceOf(parent)
+                }
+            }.filter {
+                it.manifestAndroidAttribute("key") == CLIPBOARD_PREF_KEY
+            }.toList()
+            elements.forEach { it.parentNode?.removeChild(it) }
+            Unit
+        }
+    } catch (_: Throwable) {
+    }
+
+    try {
+        val file = get(path, false)
+        if (!file.exists()) return@with
+        val original = file.readText()
+        val regex = Regex(
+            """<[^>]*key="$CLIPBOARD_PREF_KEY"[^>]*>.*?</[^>]+>|<[^>]*key="$CLIPBOARD_PREF_KEY"[^>]*/>\s*""",
+            RegexOption.DOT_MATCHES_ALL
+        )
+        val updated = regex.replace(original, "")
+        if (updated != original) {
+            file.writeText(updated)
+        }
+    } catch (_: Throwable) {
+    }
 }
 
 /**
@@ -218,49 +251,4 @@ private fun enforceIntentTargetPackage(path: String, packageName: String): Unit 
         }
     } catch (_: Throwable) {
     }
-}
-
-private fun injectIntoSettingsRoot(doc: Document, packageName: String) {
-    val root = doc.documentElement
-    val candidateEntries = root.childElements().flatMap { parent ->
-        if (parent.tagName == "androidx.preference.PreferenceCategory") {
-            parent.childElements()
-        } else {
-            sequenceOf(parent)
-        }
-    }.toList()
-
-    val existingEntry = candidateEntries.firstOrNull {
-        it.manifestAndroidAttribute("key") == CLIPBOARD_PREF_KEY
-    }
-
-    val footerPreference = root.childElements().firstOrNull {
-        it.tagName == "com.android.settingslib.widget.FooterPreference"
-    }
-    val targetCategory = root.childElements("androidx.preference.PreferenceCategory").lastOrNull()
-
-    val prefEntry = existingEntry ?: doc.createElement(HEADER_PREFERENCE_TAG).also { created ->
-        if (targetCategory != null) {
-            targetCategory.appendChild(created)
-        } else if (footerPreference != null) {
-            root.insertBefore(created, footerPreference)
-        } else {
-            root.appendChild(created)
-        }
-    }
-
-    prefEntry.setManifestAndroidAttribute("persistent", "false")
-    prefEntry.setManifestAndroidAttribute("title", "@string/gboard_clipboard_history_title")
-    prefEntry.setManifestAndroidAttribute("summary", "@string/gboard_clipboard_history_summary")
-    prefEntry.setManifestAndroidAttribute("selectable", "true")
-    prefEntry.setManifestAndroidAttribute("key", CLIPBOARD_PREF_KEY)
-    prefEntry.setManifestAndroidAttribute("icon", "@drawable/ic_clipboard_history_entry")
-
-    val intent = prefEntry.childElements("intent").firstOrNull()
-        ?: doc.createElement("intent").also { prefEntry.appendChild(it) }
-    intent.setManifestAndroidAttribute("action", "android.intent.action.MAIN")
-    if (packageName.isNotBlank()) {
-        intent.setManifestAndroidAttribute("targetPackage", packageName)
-    }
-    intent.setManifestAndroidAttribute("targetClass", CLIPBOARD_ACTIVITY_CLASS)
 }

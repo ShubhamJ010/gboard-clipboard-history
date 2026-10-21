@@ -10,6 +10,9 @@ import android.util.Log;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
+/**
+ * Backfills clipboard entries that were copied while another keyboard or app was active.
+ */
 public final class GboardClipboardBackfill {
 
     static final String TAG = "GboardClipboard";
@@ -22,16 +25,20 @@ public final class GboardClipboardBackfill {
     public static final class PrimaryClip {
         public final String text;
         public final String htmlText;
-        public final boolean sensitive;
         public final String uri;
         public final long timestamp;
+        public final boolean sensitive;
 
-        PrimaryClip(String text, String htmlText, boolean sensitive, String uri, long timestamp) {
+        PrimaryClip(String text, String htmlText, String uri, long timestamp, boolean sensitive) {
             this.text = text;
             this.htmlText = htmlText;
-            this.sensitive = sensitive;
             this.uri = uri;
             this.timestamp = timestamp;
+            this.sensitive = sensitive;
+        }
+
+        public boolean hasText() {
+            return text != null && !text.isEmpty();
         }
     }
 
@@ -39,8 +46,10 @@ public final class GboardClipboardBackfill {
         if (context == null) {
             return null;
         }
+        Context appContext = context.getApplicationContext();
+        Context lookupContext = appContext != null ? appContext : context;
         try {
-            ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipboardManager cm = (ClipboardManager) lookupContext.getSystemService(Context.CLIPBOARD_SERVICE);
             if (cm == null || !cm.hasPrimaryClip()) {
                 return null;
             }
@@ -48,76 +57,154 @@ public final class GboardClipboardBackfill {
             if (clip == null || clip.getItemCount() == 0) {
                 return null;
             }
-            ClipDescription desc = clip.getDescription();
             ClipData.Item item = clip.getItemAt(0);
+            ClipDescription description = clip.getDescription();
             if (item == null) {
                 return null;
             }
 
-            boolean sensitive = desc != null && desc.getExtras() != null
-                    && desc.getExtras().getBoolean("android.content.extra.IS_SENSITIVE", false);
+            String text = null;
+            String htmlText = null;
+            String uri = null;
 
-            Uri uri = item.getUri();
-            if (uri != null) {
-                return new PrimaryClip(null, null, sensitive, uri.toString(), System.currentTimeMillis());
+            CharSequence itemText = item.getText();
+            if (itemText != null && itemText.length() > 0) {
+                text = itemText.toString();
+            }
+            String itemHtml = item.getHtmlText();
+            if (itemHtml != null && !itemHtml.isEmpty()) {
+                htmlText = itemHtml;
             }
 
-            CharSequence text = item.getText();
-            String textStr = text != null ? text.toString() : null;
-            String htmlStr = item.getHtmlText();
-
-            if ((textStr == null || textStr.isEmpty()) && (htmlStr == null || htmlStr.isEmpty())) {
-                return null;
+            Uri itemUri = item.getUri();
+            if (text == null && htmlText == null && itemUri != null) {
+                if (isTextMimeType(description)) {
+                    CharSequence coerced = item.coerceToText(lookupContext);
+                    if (coerced != null && coerced.length() > 0) {
+                        text = coerced.toString();
+                    } else {
+                        uri = itemUri.toString();
+                    }
+                } else {
+                    uri = itemUri.toString();
+                }
+            } else if (text == null && htmlText == null) {
+                CharSequence coerced = item.coerceToText(lookupContext);
+                if (coerced != null && coerced.length() > 0) {
+                    text = coerced.toString();
+                }
             }
 
-            return new PrimaryClip(textStr, htmlStr, sensitive, null, System.currentTimeMillis());
+            return new PrimaryClip(
+                    text,
+                    htmlText,
+                    uri,
+                    resolveTimestamp(description),
+                    isSensitive(description));
         } catch (Throwable t) {
             Log.w(TAG, "Failed reading primary clip", t);
             return null;
         }
     }
 
-    public static void backfillIfNecessary(Context context) {
+    public static boolean backfillPrimaryClip(Context context) {
         if (context == null) {
-            return;
+            return false;
         }
+        Context appContext = context.getApplicationContext();
+        Context lookupContext = appContext != null ? appContext : context;
         try {
-            PrimaryClip primary = readPrimaryClip(context);
-            if (primary == null || primary.text == null || primary.text.isEmpty()) {
-                return;
+            PrimaryClip primary = readPrimaryClip(lookupContext);
+            if (primary == null || !primary.hasText()) {
+                return false;
             }
             if (primary.text.length() > MAX_TEXT_LENGTH) {
-                return;
+                return false;
             }
 
-            String marker = computeMarker(primary.text);
-            String lastMarker = GboardClipboardHistorySettings.getBackfillMarker(context);
+            String marker = buildMarker(primary.text);
+            String lastMarker = GboardClipboardHistorySettings.getBackfillMarker(lookupContext);
             if (marker.equals(lastMarker)) {
-                return;
+                return false;
             }
 
             long rowId = GboardClipboardHistoryRepository.insertClipIfAbsent(
-                    context, primary.text, primary.timestamp, primary.sensitive, RECENT_ENTRY_SCAN_LIMIT);
+                    lookupContext, primary.text, primary.timestamp, primary.sensitive, RECENT_ENTRY_SCAN_LIMIT);
 
-            if (rowId >= 0) {
-                GboardClipboardHistorySettings.setBackfillMarker(context, marker);
+            if (rowId < 0L) {
+                return false;
             }
+            GboardClipboardHistorySettings.setBackfillMarker(lookupContext, marker);
+            if (rowId == 0L) {
+                return false;
+            }
+            Log.i(TAG, "Backfilled primary clip copied under another keyboard");
+            return true;
         } catch (Throwable t) {
             Log.w(TAG, "Failed during clipboard backfill", t);
+            return false;
         }
     }
 
-    private static String computeMarker(String text) {
+    public static void backfillIfNecessary(Context context) {
+        backfillPrimaryClip(context);
+    }
+
+    static String buildMarker(String text) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] digest = md.digest(text.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder(digest.length * 2);
             for (byte b : digest) {
-                sb.append(String.format("%02x", b));
+                sb.append(Character.forDigit((b >> 4) & 0xF, 16));
+                sb.append(Character.forDigit(b & 0xF, 16));
             }
             return sb.toString();
         } catch (Throwable ignored) {
-            return String.valueOf(text.hashCode());
+            return Integer.toHexString(text.hashCode());
+        }
+    }
+
+    private static long resolveTimestamp(ClipDescription description) {
+        if (description != null) {
+            try {
+                if (description.getTimestamp() > 0L) {
+                    return description.getTimestamp();
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return System.currentTimeMillis();
+    }
+
+    private static boolean isTextMimeType(ClipDescription description) {
+        if (description == null || description.getMimeTypeCount() == 0) {
+            return false;
+        }
+        try {
+            String mimeType = description.getMimeType(0);
+            return mimeType != null && mimeType.startsWith("text/")
+                    && !"text/uri-list".equals(mimeType);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    static boolean isSensitive(ClipDescription description) {
+        if (description == null) {
+            return false;
+        }
+        try {
+            android.os.PersistableBundle extras = description.getExtras();
+            if (extras == null) {
+                return false;
+            }
+            if (extras.containsKey(ClipDescription.EXTRA_IS_SENSITIVE)) {
+                return extras.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE);
+            }
+            return extras.getBoolean("android.content.extra.IS_SENSITIVE");
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 }
