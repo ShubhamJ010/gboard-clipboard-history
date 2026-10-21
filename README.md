@@ -154,7 +154,7 @@ is missing:
 
 | Input | Source |
 | :--- | :--- |
-| `input/gboard-merged.apk` | Gboard v18.4.1 base. Provide it manually, or drop the raw splits into `input/splits/` and they get merged with APKEditor. Override with `GBOARD_APK=<path>`. |
+| `input/gboard-merged.apk` | Gboard v18.4.1 base, downloaded from the [build inputs release](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/build-inputs). You can also drop the raw splits into `input/splits/` and they get merged with APKEditor. Override with `GBOARD_APK=<path>`. |
 | `input/patches-1.2.0.mpp` | PixelBoard patch bundle, downloaded from the [PixelBoard](https://github.com/Akshayykadam/PixelBoard) repository. |
 | `input/PixelBoard-v18.4.1-Stable-V7.apk` | Latest released PixelBoard APK, downloaded from the PixelBoard releases (used for the PoC script). |
 
@@ -307,6 +307,44 @@ These are open and worth knowing before you rely on the feature.
 - Every download is pinned and checked. See [Pinned downloads](#pinned-downloads).
 - The release workflow runs with read only permissions, writes only on a tag, and pins every
   action to a commit.
+- The release assets are built by the workflow, not by a laptop, and every asset carries a build
+  provenance attestation. See [Release pipeline](#release-pipeline).
+
+### Release pipeline
+
+A tag push runs three jobs:
+
+| Job | What it does | Needs |
+| :--- | :--- | :--- |
+| `build` | Builds the patch bundle with Gradle | nothing |
+| `apk` | Builds the two patched APKs from the base APK and the bundle | `RELEASE_KEYSTORE_BASE64` and `KEYSTORE_PASSWORD` |
+| `release` | Publishes the release and attests every asset | the two jobs above |
+
+The `apk` job is skipped when the release secrets are not set. The release then carries the patch
+bundle only, and the two APKs have to be built and uploaded by hand.
+
+The secrets hold the release signing key:
+
+| Secret | Value |
+| :--- | :--- |
+| `RELEASE_KEYSTORE_BASE64` | The base64 encoded `clipboard.keystore` |
+| `KEYSTORE_PASSWORD` | The password of that keystore |
+
+Create them with:
+
+```bash
+base64 -i tools/patcher-data/clipboard.keystore | gh secret set RELEASE_KEYSTORE_BASE64
+gh secret set KEYSTORE_PASSWORD --body "<password>"
+```
+
+The certificate stays the same when the password changes, so installed builds keep updating over
+each other. Rotate the password and update the secret together.
+
+Verify an asset before you install it:
+
+```bash
+gh attestation verify Gboard-Clipboard-History.apk --repo ShubhamJ010/gboard-clipboard-history
+```
 
 ### Reporting a problem
 

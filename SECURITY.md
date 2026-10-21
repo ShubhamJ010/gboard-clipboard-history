@@ -41,6 +41,8 @@ get a credit line in the release notes unless the reporter asks otherwise.
 - Every build input is pinned to a commit and checked against a sha256 digest.
 - The release workflow runs with read only permissions, writes only on a tag, and pins each action
   to a commit.
+- The release assets are built by the workflow and carry a build provenance attestation, so the
+  digest can be checked against the tag that produced it.
 
 The remaining limits are listed under [Security](README.md#security) in the README. The most
 important one: the history is stored in a plain SQLite database without encryption and without
