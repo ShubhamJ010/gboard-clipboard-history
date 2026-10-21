@@ -77,17 +77,29 @@ rm -rf "$PATCH_DEX" && mkdir -p "$PATCH_DEX"
 
 log "4/5 assemble .mpp"
 rm -rf "$MPP_STAGE" && mkdir -p "$MPP_STAGE/extensions" "$MPP_STAGE/META-INF"
+
+# The bundle metadata lives in one place. The Gradle build reads the same file
+# for its about block, so the two bundle paths cannot drift apart.
+ABOUT_FILE="$PROJECT_ROOT/patches/about.properties"
+[[ -f "$ABOUT_FILE" ]] || die "missing patch metadata: $ABOUT_FILE"
+about_value() {
+    local value
+    value="$(sed -n "s/^$1=//p" "$ABOUT_FILE" | head -1)"
+    [[ -n "$value" ]] || die "patch metadata is missing the '$1' key: $ABOUT_FILE"
+    printf '%s' "$value"
+}
+
 cat > "$MPP_STAGE/META-INF/MANIFEST.MF" <<EOF
 Manifest-Version: 1.0
-Name: Gboard Clipboard History
-Description: Standalone clipboard history manager for Gboard with search, export, and ContentProvider API.
+Name: $(about_value name)
+Description: $(about_value description)
 Version: $VERSION
 Timestamp: $(date +%s000)
-Source: https://github.com/ShubhamJ010/gboard-clipboard-history
-Author: sj010
-Contact: https://github.com/ShubhamJ010/gboard-clipboard-history/issues
-Website: https://github.com/ShubhamJ010/gboard-clipboard-history
-License: GPLv3
+Source: $(about_value source)
+Author: $(about_value author)
+Contact: $(about_value contact)
+Website: $(about_value website)
+License: $(about_value license)
 Patcher-Version: 1.8.0
 EOF
 cp "$PATCH_DEX/classes.dex" "$MPP_STAGE/classes.dex"

@@ -6,7 +6,8 @@ android {
     namespace = "com.sj010.gboardclipboard.extension"
 
     defaultConfig {
-        minSdk = 26
+        // Must match the d8 --min-api that scripts/build-mpp.sh uses for the .rve dex.
+        minSdk = 29
         targetSdk = 35
     }
 

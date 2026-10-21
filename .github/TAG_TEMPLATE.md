@@ -14,43 +14,30 @@ git push origin "${VERSION}"
 
 ---
 
-## Release Notes Template (`gh release create` / GitHub UI)
+## Release Notes
 
-```markdown
-### Summary
-<!-- 2-3 lines summarizing the main highlights of this release -->
-
-### What's Changed
-- **PixelBoard Material 3 UI**: <!-- UI improvements, palette, layout updates -->
-- **Settings Hierarchy**: <!-- Placement of preference entry points -->
-- **Sync & Backfill**: <!-- Clipboard capture hooks and database sync -->
-- **Bug Fixes**: <!-- Fixes for crashes, permissions, or lifecycle -->
-
-### Release Assets (Mandatory)
-Every release must include exactly these two assets:
-1. **`Gboard-com.sj010.gboard.apk`**: Standalone patched and signed Gboard keyboard package with clipboard history pre-integrated.
-2. **`patches-<version>.mpp`**: Standalone Morphe patch bundle for use with Morphe Manager or CLI patcher.
-
-### Morphe Manager Import
-- Direct Import Link: `https://morphe.software/add-source?github=ShubhamJ010/gboard-clipboard-history&name=Gboard%20Clipboard%20History`
-- Remote Source: `github.com/ShubhamJ010/gboard-clipboard-history`
-
-**Full Changelog**: https://github.com/ShubhamJ010/gboard-clipboard-history/compare/<previous-tag>...<new-tag>
-```
+The release notes template lives in
+[.github/release_template.md](release_template.md). GitHub fills it in automatically
+when the release is published, and the install links in it already point at the
+Morphe Manager and Obtainium entries.
 
 ---
 
 ## Release Creation CLI Command
 
+The release asset names have to match what the README and the release workflow
+expect, so the bundle is copied to a versioned name first.
+
 ```bash
 VERSION="0.0.X-alpha"
-PREV_VERSION="0.0.Y-alpha"
+cp patches/GboardClipboardHistory.mpp "output/patches-${VERSION}.mpp"
 
 gh release create "${VERSION}" \
-  output/Gboard-com.sj010.gboard.apk \
-  output/patches-${VERSION}.mpp \
+  "output/patches-${VERSION}.mpp" \
+  output/Gboard-Clipboard-History.apk \
+  output/PixelBoard-Clipboard-History.apk \
   --title "${VERSION}" \
-  --notes-file .github/release_notes.md \
+  --notes-file .github/release_template.md \
   --prerelease
 ```
 
@@ -59,14 +46,16 @@ gh release create "${VERSION}" \
 ## Pre-Release Verification Checklist
 
 - [ ] `./scripts/build-mpp.sh --rebuild-extension` builds `patches/GboardClipboardHistory.mpp` without errors.
-- [ ] `./scripts/build-gboard-clipboard.sh` builds functional `output/Gboard-com.sj010.gboard.apk`.
+- [ ] `./scripts/build-gboard-clipboard.sh` builds functional `output/Gboard-Clipboard-History.apk`.
+- [ ] `./scripts/build-gboard-clipboard-pixelboard.sh` builds functional `output/PixelBoard-Clipboard-History.apk`.
 - [ ] Tested on target device:
   - [ ] App installs and enables as primary IME.
   - [ ] Setting entry is strictly inside `Gboard Settings -> Clipboard`.
   - [ ] Copying in third-party apps (e.g. Google Keep) captures clips in foreground.
   - [ ] History activity opens with Material 3 Monet dynamic theming.
-- [ ] Exactly two release assets prepared:
-  - `Gboard-com.sj010.gboard.apk`
+- [ ] Exactly three release assets prepared:
   - `patches-<version>.mpp`
+  - `Gboard-Clipboard-History.apk`
+  - `PixelBoard-Clipboard-History.apk`
 - [ ] `patches-bundle.json` updated with new version number and download URL.
 - [ ] `README.md` download links and badges point to the new release tag.

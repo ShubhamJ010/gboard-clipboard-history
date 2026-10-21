@@ -40,12 +40,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
           VERSION="$(grep -E '^version\s*=' gradle.properties | cut -d'=' -f2 | tr -d ' ')"
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
           fi
-          if [[ -z "$VERSION" || "$VERSION" == "main" ]]; then
-            VERSION="0.0.5-alpha"
+          if [[ -z "$VERSION" ]]; then
+            echo "cannot read the version from gradle.properties" >&2
+            exit 1
           fi
           ./gradlew :patches:buildAndroid -Pversion="$VERSION" -Pgpr.user="$GITHUB_ACTOR"
 
@@ -94,6 +96,21 @@ jobs:
         with:
           name: GboardClipboardHistory.mpp
           path: patches
+
+      # The Gradle build names the bundle after the version. The build scripts
+      # look for one fixed name, so put the downloaded file where they expect it.
+      - name: Place the patch bundle where the build scripts look for it
+        run: |
+          set -euo pipefail
+          if [[ ! -f patches/GboardClipboardHistory.mpp ]]; then
+            bundle="$(ls -1 patches/*.mpp 2>/dev/null | head -1)"
+            if [[ -z "$bundle" ]]; then
+              echo "no patch bundle was downloaded" >&2
+              exit 1
+            fi
+            mv "$bundle" patches/GboardClipboardHistory.mpp
+          fi
+          echo "patch bundle: patches/GboardClipboardHistory.mpp"
 
       - name: Restore release keystore
         id: keystore

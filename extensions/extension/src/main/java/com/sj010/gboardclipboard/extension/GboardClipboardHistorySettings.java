@@ -174,9 +174,7 @@ public final class GboardClipboardHistorySettings {
         if (token != null && !token.isEmpty()) {
             return token;
         }
-        String generated = generateAccessToken();
-        preferences.edit().putString(PREF_KEY_ACCESS_TOKEN, generated).apply();
-        return generated;
+        return storeAccessToken(preferences);
     }
 
     public static String regenerateAccessToken(Context context) {
@@ -184,6 +182,10 @@ public final class GboardClipboardHistorySettings {
         if (preferences == null) {
             return "";
         }
+        return storeAccessToken(preferences);
+    }
+
+    private static String storeAccessToken(SharedPreferences preferences) {
         String generated = generateAccessToken();
         preferences.edit().putString(PREF_KEY_ACCESS_TOKEN, generated).apply();
         return generated;

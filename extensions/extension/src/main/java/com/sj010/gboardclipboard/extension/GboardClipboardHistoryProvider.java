@@ -20,8 +20,8 @@ import java.util.List;
  */
 public final class GboardClipboardHistoryProvider extends ContentProvider {
 
-    public static final String AUTHORITY = "com.sj010.gboardclipboard.history";
-    public static final String PATH_CLIPS = "clips";    public static final String PATH_PRIMARY = "primary";
+    public static final String PATH_CLIPS = "clips";
+    public static final String PATH_PRIMARY = "primary";
     public static final String QUERY_PARAM_TOKEN = "token";
 
     public static final String MIME_TYPE_CLIPS_DIR = "vnd.android.cursor.dir/clips";
@@ -120,17 +120,8 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
             if (primary.sensitive && !includeSensitive) {
                 return cursor;
             }
-            cursor.addRow(new Object[]{
-                    0L,
-                    primary.text,
-                    primary.htmlText,
-                    0,
-                    0,
-                    primary.timestamp,
-                    primary.sensitive ? 1 : 0,
-                    primary.uri,
-                    null
-            });
+            appendRow(cursor, 0L, primary.text, primary.htmlText, 0, 0, primary.timestamp,
+                    primary.sensitive, primary.uri, null);
         } catch (Throwable t) {
             Log.w(TAG, "Failed reading primary clip", t);
         }
@@ -199,18 +190,30 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
         }
     }
 
-    private static void appendRow(MatrixCursor cursor, GboardClipboardHistoryRepository.ClipboardEntry entry) {
+    /**
+     * Writes one row in the column order of
+     * {@link GboardClipboardHistoryRepository#ALL_COLUMNS}. Every endpoint goes
+     * through this, so the column order is defined in one place.
+     */
+    private static void appendRow(MatrixCursor cursor, long id, String text, String htmlText,
+            int itemType, int entityType, long timestamp, boolean sensitive, String uri, String groupId) {
         cursor.addRow(new Object[]{
-                entry.getId(),
-                entry.getText(),
-                entry.getHtmlText(),
-                entry.getItemType(),
-                entry.getEntityType(),
-                entry.getTimestamp(),
-                entry.isSensitive() ? 1 : 0,
-                entry.getUri(),
-                entry.getGroupId()
+                id,
+                text,
+                htmlText,
+                itemType,
+                entityType,
+                timestamp,
+                sensitive ? 1 : 0,
+                uri,
+                groupId
         });
+    }
+
+    private static void appendRow(MatrixCursor cursor, GboardClipboardHistoryRepository.ClipboardEntry entry) {
+        appendRow(cursor, entry.getId(), entry.getText(), entry.getHtmlText(), entry.getItemType(),
+                entry.getEntityType(), entry.getTimestamp(), entry.isSensitive(), entry.getUri(),
+                entry.getGroupId());
     }
 
     private static long parseId(Uri uri) {

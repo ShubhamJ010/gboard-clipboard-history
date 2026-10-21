@@ -92,65 +92,84 @@ public final class GboardClipboardHistoryRepository {
         }
     }
 
-    public static List<ClipboardEntry> loadHistory(Context context, boolean includeSensitive, int limit) {
-        if (context == null) {
-            return Collections.emptyList();
-        }
-        int effectiveLimit = limit <= 0 ? 0 : Math.min(limit, MAX_LIMIT);
-        if (effectiveLimit == 0) {
-            return Collections.emptyList();
+    /**
+     * A read of the history database: the entries that were asked for and the
+     * total number of rows, from a single open of the database.
+     */
+    public static final class HistorySnapshot {
+        private final List<ClipboardEntry> entries;
+        private final int totalCount;
+        private final boolean available;
+
+        HistorySnapshot(List<ClipboardEntry> entries, int totalCount, boolean available) {
+            this.entries = entries;
+            this.totalCount = totalCount;
+            this.available = available;
         }
 
-        SQLiteDatabase database = openClipboardDatabase(context, false);
-        if (database == null) {
-            database = openClipboardDatabase(context, true);
+        public List<ClipboardEntry> getEntries() {
+            return entries;
         }
+
+        public int getTotalCount() {
+            return totalCount;
+        }
+
+        /**
+         * False when the database could not be read at all. An empty history and
+         * an unreadable database are different states for the caller.
+         */
+        public boolean isAvailable() {
+            return available;
+        }
+    }
+
+    /**
+     * Reads the history and the total row count from one open of the database.
+     *
+     * @param limit the maximum number of entries to return, {@code 0} for none.
+     */
+    public static HistorySnapshot loadSnapshot(Context context, boolean includeSensitive, int limit) {
+        if (context == null) {
+            return new HistorySnapshot(Collections.emptyList(), 0, false);
+        }
+        if (!clipboardDatabaseExists(context)) {
+            // Gboard creates the database when it captures the first clip. Until
+            // then there is nothing to read, which is not a read failure.
+            return new HistorySnapshot(Collections.emptyList(), 0, true);
+        }
+        SQLiteDatabase database = openForReading(context);
         if (database == null) {
-            return Collections.emptyList();
+            return new HistorySnapshot(Collections.emptyList(), 0, false);
         }
 
         try {
-            return readEntries(database, includeSensitive, effectiveLimit);
+            Set<String> availableColumns = resolveAvailableColumns(database);
+            String selection = buildSelection(includeSensitive, availableColumns);
+            int effectiveLimit = limit <= 0 ? 0 : Math.min(limit, MAX_LIMIT);
+            List<ClipboardEntry> entries = effectiveLimit == 0
+                    ? Collections.emptyList()
+                    : readEntries(database, selection, availableColumns, effectiveLimit);
+            int totalCount = countEntries(database, selection);
+            return new HistorySnapshot(entries, totalCount, true);
         } catch (Throwable t) {
             Log.w(TAG, "Failed reading clipboard history", t);
-            return Collections.emptyList();
+            return new HistorySnapshot(Collections.emptyList(), 0, false);
         } finally {
             closeQuietly(database);
         }
     }
 
-    public static int countHistory(Context context, boolean includeSensitive) {
-        if (context == null) {
-            return 0;
-        }
-        SQLiteDatabase database = openClipboardDatabase(context, false);
-        if (database == null) {
-            database = openClipboardDatabase(context, true);
-        }
-        if (database == null) {
-            return 0;
-        }
-
-        try {
-            return countEntries(database, includeSensitive);
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed counting clipboard history", t);
-            return 0;
-        } finally {
-            closeQuietly(database);
-        }
+    public static List<ClipboardEntry> loadHistory(Context context, boolean includeSensitive, int limit) {
+        return loadSnapshot(context, includeSensitive, limit).getEntries();
     }
 
-    private static List<ClipboardEntry> readEntries(SQLiteDatabase database,
-            boolean includeSensitive, int limit) {
-        Set<String> availableColumns = resolveAvailableColumns(database);
+    private static List<ClipboardEntry> readEntries(SQLiteDatabase database, String selection,
+            Set<String> availableColumns, int limit) {
         String[] projection = resolveProjection(availableColumns);
         if (projection.length == 0) {
             return Collections.emptyList();
         }
-        String selection = includeSensitive || !availableColumns.contains(COLUMN_SENSITIVE)
-                ? null
-                : COLUMN_SENSITIVE + " = 0";
         List<ClipboardEntry> entries = new ArrayList<>();
         Cursor cursor = database.query(TABLE_CLIPS, projection, selection, null, null, null,
                 COLUMN_TIMESTAMP + " DESC, " + COLUMN_ID + " DESC",
@@ -171,11 +190,7 @@ public final class GboardClipboardHistoryRepository {
         return Collections.unmodifiableList(entries);
     }
 
-    private static int countEntries(SQLiteDatabase database, boolean includeSensitive) {
-        Set<String> availableColumns = resolveAvailableColumns(database);
-        String selection = includeSensitive || !availableColumns.contains(COLUMN_SENSITIVE)
-                ? null
-                : COLUMN_SENSITIVE + " = 0";
+    private static int countEntries(SQLiteDatabase database, String selection) {
         Cursor cursor = database.query(TABLE_CLIPS, new String[]{COLUMN_ID}, selection, null,
                 null, null, null, null);
         if (cursor == null) {
@@ -188,23 +203,15 @@ public final class GboardClipboardHistoryRepository {
         }
     }
 
-    public static long insertClip(Context context, String text, long timestamp, boolean sensitive) {
-        if (context == null || text == null || text.isEmpty()) {
-            return -1L;
+    /**
+     * The filter that hides the sensitive entries, or null when nothing has to
+     * be filtered.
+     */
+    private static String buildSelection(boolean includeSensitive, Set<String> availableColumns) {
+        if (includeSensitive || !availableColumns.contains(COLUMN_SENSITIVE)) {
+            return null;
         }
-        SQLiteDatabase database = openClipboardDatabase(context, true);
-        if (database == null) {
-            return -1L;
-        }
-        try {
-            Set<String> availableColumns = resolveAvailableColumns(database);
-            return insertRow(database, availableColumns, text, timestamp, sensitive);
-        } catch (Throwable t) {
-            Log.w(TAG, "Failed inserting clipboard entry", t);
-            return -1L;
-        } finally {
-            closeQuietly(database);
-        }
+        return COLUMN_SENSITIVE + " = 0";
     }
 
     public static long insertClipIfAbsent(Context context, String text, long timestamp,
@@ -342,6 +349,25 @@ public final class GboardClipboardHistoryRepository {
         }
     }
 
+    /**
+     * True when Gboard has already created its clipboard database. The database
+     * only appears once the keyboard captured the first clip.
+     */
+    private static boolean clipboardDatabaseExists(Context context) {
+        File databaseFile = context.getDatabasePath(DATABASE_NAME);
+        return databaseFile != null && databaseFile.exists();
+    }
+
+    /**
+     * Opens the clipboard database for reading. The read only open is tried first
+     * because it never writes a journal file, and the read write open is the
+     * fallback for a database the system locked down.
+     */
+    private static SQLiteDatabase openForReading(Context context) {
+        SQLiteDatabase database = openClipboardDatabase(context, false);
+        return database != null ? database : openClipboardDatabase(context, true);
+    }
+
     private static SQLiteDatabase openClipboardDatabase(Context context, boolean writable) {
         File databaseFile = context.getDatabasePath(DATABASE_NAME);
         if (databaseFile == null || !databaseFile.exists()) {
@@ -404,22 +430,36 @@ public final class GboardClipboardHistoryRepository {
         return new ClipboardEntry(id, text, htmlText, itemType, entityType, timestamp, sensitive, uri, groupId);
     }
 
+    private interface ColumnReader<T> {
+        T read(Cursor cursor, int index);
+    }
+
+    /**
+     * Reads one column, falling back when the column does not exist in this
+     * schema or holds a null.
+     */
+    private static <T> T readColumn(Cursor cursor, String col, Set<String> available,
+            T fallback, ColumnReader<T> reader) {
+        if (!available.contains(col)) {
+            return fallback;
+        }
+        int index = cursor.getColumnIndex(col);
+        if (index < 0 || cursor.isNull(index)) {
+            return fallback;
+        }
+        return reader.read(cursor, index);
+    }
+
     private static String getString(Cursor cursor, String col, Set<String> available, String def) {
-        if (!available.contains(col)) return def;
-        int idx = cursor.getColumnIndex(col);
-        return idx < 0 || cursor.isNull(idx) ? def : cursor.getString(idx);
+        return readColumn(cursor, col, available, def, (c, i) -> c.getString(i));
     }
 
     private static int getInt(Cursor cursor, String col, Set<String> available, int def) {
-        if (!available.contains(col)) return def;
-        int idx = cursor.getColumnIndex(col);
-        return idx < 0 || cursor.isNull(idx) ? def : cursor.getInt(idx);
+        return readColumn(cursor, col, available, def, (c, i) -> c.getInt(i));
     }
 
     private static long getLong(Cursor cursor, String col, Set<String> available, long def) {
-        if (!available.contains(col)) return def;
-        int idx = cursor.getColumnIndex(col);
-        return idx < 0 || cursor.isNull(idx) ? def : cursor.getLong(idx);
+        return readColumn(cursor, col, available, def, (c, i) -> c.getLong(i));
     }
 
     private static void closeQuietly(SQLiteDatabase database) {

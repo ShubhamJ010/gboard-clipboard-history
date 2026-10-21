@@ -1,11 +1,57 @@
 package com.sj010.gboardclipboard.patches
 
-import org.w3c.dom.Attr
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
+import java.io.File
 
 internal const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
+
+/**
+ * Rewrites `android:targetPackage` on the intents of a preference document.
+ *
+ * The resource patcher does not consistently flush DOM attribute mutations of the decoded
+ * preference documents back into the workspace, so the attribute is enforced directly on
+ * the raw XML. That keeps an entry resolvable regardless of whether the package rename
+ * patch already ran or still has to run.
+ *
+ * @param file the document to rewrite
+ * @param packageName the package the intents have to point at
+ * @param previousPackage the package the intents pointed at before the rename
+ * @param targetClass when set, only the intent for that class is rewritten. When it is
+ *     null, every intent that still points at [previousPackage] is rewritten.
+ * @return true when the document was changed
+ */
+internal fun enforceIntentTargetPackage(
+    file: File,
+    packageName: String,
+    previousPackage: String,
+    targetClass: String? = null,
+): Boolean {
+    if (!file.exists()) {
+        return false
+    }
+    val original = file.readText()
+    val updated = if (targetClass != null) {
+        val intentRegex = Regex("""<intent\b[^>]*targetClass="${Regex.escape(targetClass)}"[^>]*/>""")
+        intentRegex.replace(original) { match ->
+            match.value.replace(
+                Regex("""targetPackage="[^"]*""""),
+                """targetPackage="$packageName"""",
+            )
+        }
+    } else {
+        original.replace(
+            """targetPackage="$previousPackage"""",
+            """targetPackage="$packageName"""",
+        )
+    }
+    if (updated == original) {
+        return false
+    }
+    file.writeText(updated)
+    return true
+}
 
 internal fun Element.childElements(name: String? = null): Sequence<Element> =
     (0 until childNodes.length)
@@ -59,29 +105,4 @@ internal fun ensureManifestPermission(
     }
     permission.setManifestAndroidAttribute("name", permissionName)
     permission.setManifestAndroidAttribute("protectionLevel", protectionLevel)
-}
-
-internal fun ensureManifestIntentFilter(
-    document: Document,
-    component: Element,
-    actionName: String,
-    categoryName: String? = null,
-) {
-    val intentFilter = component.childElements("intent-filter").firstOrNull {
-        it.childElements("action").any { action ->
-            action.manifestAndroidAttribute("name") == actionName
-        }
-    } ?: document.createElement("intent-filter").also(component::appendChild)
-
-    val action = intentFilter.childElements("action").firstOrNull {
-        it.manifestAndroidAttribute("name") == actionName
-    } ?: document.createElement("action").also(intentFilter::appendChild)
-    action.setManifestAndroidAttribute("name", actionName)
-
-    if (categoryName != null) {
-        val category = intentFilter.childElements("category").firstOrNull {
-            it.manifestAndroidAttribute("name") == categoryName
-        } ?: document.createElement("category").also(intentFilter::appendChild)
-        category.setManifestAndroidAttribute("name", categoryName)
-    }
 }
