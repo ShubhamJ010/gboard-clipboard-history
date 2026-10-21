@@ -52,7 +52,7 @@ public final class GboardClipboardHistorySettings {
         }
         try {
             android.content.pm.ProviderInfo info = context.getPackageManager().getProviderInfo(
-                    new android.content.pm.ComponentName(context, GboardClipboardHistoryProvider.class),
+                    new android.content.ComponentName(context, GboardClipboardHistoryProvider.class),
                     0);
             if (info != null && info.authority != null && !info.authority.isEmpty()) {
                 return info.authority;
@@ -63,30 +63,29 @@ public final class GboardClipboardHistorySettings {
     }
 
     /**
-     * Resolves the signature permission this build declares for external
-     * clipboard access.
+     * The signature permission this build declares for external clipboard
+     * access. The scoped variant is used for every host package other than the
+     * reference build.
      */
     public static String resolvePermission(Context context) {
         if (context == null) {
             return PERMISSION_READ_CLIPBOARD_HISTORY;
         }
-        try {
-            String[] declared = context.getPackageManager()
-                    .getPackageInfo(context.getPackageName(), android.content.pm.PackageManager.GET_PERMISSIONS)
-                    .permissions;
-            if (declared != null) {
-                for (String permission : declared) {
-                    if (permission != null && permission.endsWith(PERMISSION_NAME_SUFFIX)) {
-                        return permission;
-                    }
-                }
-            }
-        } catch (Throwable ignored) {
-        }
         return permissionForPackage(context.getPackageName());
     }
 
-    private static final String PERMISSION_NAME_SUFFIX = ".permission.READ_CLIPBOARD_HISTORY";
+    /**
+     * All permission names that may protect the provider. The reference build
+     * declares the documented name, a renamed host declares the scoped one, so
+     * both are accepted.
+     */
+    public static String[] candidatePermissions(Context context) {
+        String scoped = resolvePermission(context);
+        if (PERMISSION_READ_CLIPBOARD_HISTORY.equals(scoped)) {
+            return new String[]{PERMISSION_READ_CLIPBOARD_HISTORY};
+        }
+        return new String[]{scoped, PERMISSION_READ_CLIPBOARD_HISTORY};
+    }
 
     static final String PREF_FILE_NAME = "gboard_clipboard_history_prefs";
 

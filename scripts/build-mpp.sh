@@ -36,8 +36,22 @@ VERSION="$(grep -E '^version\s*=' "$PROJECT_ROOT/gradle.properties" | cut -d'=' 
 
 log "1/5 extension (.rve dex)"
 mkdir -p "$EXT_OUT"
+EXT_SOURCES="$PROJECT_ROOT/extensions/extension/src/main/java"
+NEEDS_EXT_BUILD=false
 if [[ "$REBUILD_EXTENSION" == true || ! -f "$EXT_OUT/classes.dex" ]]; then
-    find "$PROJECT_ROOT/extensions/extension/src/main/java" -name "*.java" > "$BUILD_DIR/extension-sources.txt"
+    NEEDS_EXT_BUILD=true
+else
+    # rebuild when any extension source is newer than the compiled dex
+    while IFS= read -r source; do
+        if [[ "$source" -nt "$EXT_OUT/classes.dex" ]]; then
+            NEEDS_EXT_BUILD=true
+            break
+        fi
+    done < <(find "$EXT_SOURCES" -name "*.java")
+fi
+
+if [[ "$NEEDS_EXT_BUILD" == true ]]; then
+    find "$EXT_SOURCES" -name "*.java" > "$BUILD_DIR/extension-sources.txt"
     rm -rf "$EXT_OUT/classes" && mkdir -p "$EXT_OUT/classes"
     javac -nowarn -d "$EXT_OUT/classes" -cp "$ANDROID_JAR" "@$BUILD_DIR/extension-sources.txt"
     jar cf "$EXT_OUT/ext.jar" -C "$EXT_OUT/classes" .

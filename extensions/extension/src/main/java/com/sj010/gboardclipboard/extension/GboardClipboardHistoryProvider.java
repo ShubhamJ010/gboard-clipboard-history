@@ -153,9 +153,11 @@ public final class GboardClipboardHistoryProvider extends ContentProvider {
         if (callingUid == Process.myUid()) {
             return;
         }
-        if (context.checkPermission(GboardClipboardHistorySettings.resolvePermission(context),
-                Binder.getCallingPid(), callingUid) == PackageManager.PERMISSION_GRANTED) {
-            return;
+        for (String permission : GboardClipboardHistorySettings.candidatePermissions(context)) {
+            if (context.checkPermission(permission, Binder.getCallingPid(), callingUid)
+                    == PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
         }
         String token = uri == null ? null : uri.getQueryParameter(QUERY_PARAM_TOKEN);
         if (GboardClipboardHistorySettings.isAccessTokenValid(context, token)) {
