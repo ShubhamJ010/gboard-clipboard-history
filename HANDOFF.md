@@ -100,7 +100,7 @@ Three independent defects were found; all are fixed now.
 
 ## 5. Verification of the Fixed Build
 
-`./build-local.sh --patch ../PixelBoard/input/gboard-merged.apk` produces
+`./build-local.sh --signing-key pixelboard --patch ../PixelBoard/input/gboard-merged.apk` produces
 `output/Gboard-com.sj010.gboard.apk`; after decoding it with APKEditor:
 
 | Check | Result |
@@ -115,17 +115,49 @@ Three independent defects were found; all are fixed now.
 | DEX | all `com.sj010.gboardclipboard.extension.*` classes present in `classes.dex` |
 | Resources | `gboard_clipboard_history_title` / `_summary` strings and `ic_clipboard_history_entry` drawable present |
 
+### 5.1 On-device verification (OnePlus 8T, `192.168.1.80:43159`)
+
+> The device had the old build installed but **disabled** and only present in the work profile
+> (User 10). It was updated in place for User 0 and enabled.
+> Signing note: the device build was signed with the *PixelBoard* keystore, so the new APK has to
+> be signed with the same certificate or Android refuses the update
+> (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) – use `--signing-key pixelboard`.
+
+| Step | Result |
+| :--- | :--- |
+| `adb install -r -g` | `Success` (in-place update, data preserved) |
+| `pm enable com.sj010.gboard` | enabled |
+| `ime list -a` | `com.sj010.gboard/com.android.inputmethod.latin.LatinIME` registered |
+| Keyboard as active IME | renders fully, suggestions work, no crash in logcat |
+| `Gboard Settings` → bottom entry | "Clipboard History" with icon + summary "Search, export, and manage persistent clips" |
+| Tap the entry | `START … GboardClipboardHistoryActivity … result code=0` – **the `targetPackage` fix works** |
+| Clipboard History UI | title, clip counter, search box, Export / Settings-API / Clear All all render |
+| Settings / API dialog | opens, access token generated (`c4c63907…`), companion-app toggle works |
+| `content query …/clips?token=…` | returns the captured row |
+| `content query …/clips` (no token) | `SecurityException: Unauthorized. Requires permission … or valid query parameter '?token=…'` – correct |
+| `content query …/primary?token=…` | returns the live system clipboard |
+| Clip list | shows the captured clip with a relative timestamp |
+| Search filter | typing `Hello` filters the list correctly |
+
+### 5.2 Two behavioural findings
+
+1. **Gboard's own Clipboard feature has to be enabled.** Gboard only writes to
+   `gboard_clipboard.db` when its built-in clipboard is switched on
+   (`Gboard Settings → Clipboard` → "Turn on Clipboard"). With it off the database stays empty and
+   the manager shows "0 clips captured in Gboard" even though the system clipboard has content.
+   The manager should either surface this hint or the README should call it out.
+2. **`GboardClipboardBackfill.backfillIfNecessary()` is dead code** – nothing calls it
+   (only `readPrimaryClip()` is used, by the provider's `/primary` path). The "Background
+   backfill" feature advertised in the README therefore does not exist yet. Either wire it into
+   the activity's `onResume()` or remove the claim.
+
 ## 6. Immediate Next Step for the Next Session
 
-1. Install the freshly built `output/Gboard-com.sj010.gboard.apk` on the OnePlus 8T and confirm
-   that `Gboard Settings -> Clipboard History` opens `GboardClipboardHistoryActivity` (it
-   previously crashed with `ActivityNotFoundException` because the extension DEX was missing).
-2. Verify the ContentProvider end to end, e.g.
-   `adb shell content query --uri "content://com.sj010.gboardclipboard.history/clips?token=<token>"`
-   after enabling *Settings / API -> Allow companion apps* on the device.
-3. Push the fixes to `ShubhamJ010/gboard-clipboard-history`, tag `1.0.0` and let CI publish
+1. Push the fixes to `ShubhamJ010/gboard-clipboard-history`, tag `1.0.0` and let CI publish
    `patches-1.0.0.mpp` (the `patches-bundle.json` `download_url` already points at that tag).
-4. Optional follow-ups that are still open compared to the PixelBoard reference implementation:
+2. Wire up `backfillIfNecessary()` (see §5.2 item 2) and add the "turn on Gboard's clipboard"
+   hint to the manager UI (see §5.2 item 1).
+3. Optional follow-ups that are still open compared to the PixelBoard reference implementation:
    - `res/values/strings.xml` still contains `market://details?id=com.google.android.inputmethod.latin`
      and `res/values/arrays.xml` still contains the old package name; the Play Store links should
      point at the renamed package.
