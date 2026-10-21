@@ -160,9 +160,27 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          files: release/*.mpp release/*.apk
+          # The action splits this input on newlines and commas, one pattern per
+          # line. A space separated list is taken as a single pattern and
+          # matches nothing.
+          files: |
+            release/*.mpp
+            release/*.apk
           generate_release_notes: true
           prerelease: true
+
+      - name: Verify the release carries the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          assets="$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')"
+          echo "release assets:"
+          echo "$assets"
+          if ! grep -qE '^patches-.*\.mpp$' <<< "$assets"; then
+            echo "the release has no patch bundle, refusing to pass" >&2
+            exit 1
+          fi
 
       - name: Attest patch bundle
         if: hashFiles('release/*.mpp') != ''
