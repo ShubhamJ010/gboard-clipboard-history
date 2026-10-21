@@ -29,8 +29,8 @@ MPP_OUT="${MPP_OUT:-$PROJECT_ROOT/patches/GboardClipboardHistory.mpp}"
 
 GBOARD_VERSION="18.4.1.985164140-release-arm64-v8a"
 PIXELBOARD_REPO="${PIXELBOARD_REPO:-Akshayykadam/PixelBoard}"
-PIXELBOARD_TAG="${PIXELBOARD_TAG:-v18.4.1-Stable-V7}"
-PIXELBOARD_MPP_TAG="${PIXELBOARD_MPP_TAG:-v18.4.1-Stable-V7}"
+PIXELBOARD_TAG="${PIXELBOARD_TAG:-$PIXELBOARD_RELEASE_TAG}"
+PIXELBOARD_MPP_TAG="${PIXELBOARD_MPP_TAG:-$PIXELBOARD_RELEASE_TAG}"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
 warn() { printf '\033[1;33mWARN:\033[0m %s\n' "$*" >&2; }
@@ -288,14 +288,14 @@ ensure_gboard_apk() {
 
 # Latest released PixelBoard APK (release asset).
 ensure_pixelboard_apk() {
-    local target="$INPUT_DIR/PixelBoard-${PIXELBOARD_TAG}.apk"
+    local target="$INPUT_DIR/$PIXELBOARD_APK_ASSET"
     if [[ -f "$target" ]]; then
         verify_sha256 "$target" "$PIXELBOARD_APK_SHA256"
         echo "$target"; return 0
     fi
     mkdir -p "$INPUT_DIR"
     download_pinned \
-        "https://github.com/$PIXELBOARD_REPO/releases/download/$PIXELBOARD_TAG/PixelBoard-18.4.1-V7.apk" \
+        "https://github.com/$PIXELBOARD_REPO/releases/download/$PIXELBOARD_TAG/$PIXELBOARD_APK_ASSET" \
         "$target" \
         "$PIXELBOARD_APK_SHA256"
     echo "$target"
@@ -303,14 +303,14 @@ ensure_pixelboard_apk() {
 
 # PixelBoard patch bundle (.mpp) used for the combined builds.
 ensure_pixelboard_mpp() {
-    local target="$INPUT_DIR/patches-1.2.0.mpp"
+    local target="$INPUT_DIR/$PIXELBOARD_MPP_ASSET"
     if [[ -f "$target" ]]; then
         verify_sha256 "$target" "$PIXELBOARD_MPP_SHA256"
         echo "$target"; return 0
     fi
     mkdir -p "$INPUT_DIR"
     download_pinned \
-        "https://github.com/$PIXELBOARD_REPO/releases/download/$PIXELBOARD_MPP_TAG/patches-1.2.0.mpp" \
+        "https://github.com/$PIXELBOARD_REPO/releases/download/$PIXELBOARD_MPP_TAG/$PIXELBOARD_MPP_ASSET" \
         "$target" \
         "$PIXELBOARD_MPP_SHA256"
     echo "$target"

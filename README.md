@@ -110,7 +110,7 @@ gboard-clipboard-history/
 ├── input/                         # Build inputs (git ignored, auto downloaded)
 │   ├── gboard-merged.apk                          # Gboard v18.4.1 base
 │   ├── patches-1.2.0.mpp                          # PixelBoard patch bundle
-│   └── PixelBoard-v18.4.1-Stable-V7.apk           # Latest released PixelBoard APK
+│   └── PixelBoard-18.4.1-V7.apk                 # Latest released PixelBoard APK
 ├── .github/workflows/build.yml    # CI build workflow
 ├── patches-bundle.json            # Morphe Manager repository metadata
 └── settings.gradle.kts            # Gradle settings and plugin configuration
@@ -156,7 +156,7 @@ is missing:
 | :--- | :--- |
 | `input/gboard-merged.apk` | Gboard v18.4.1 base, downloaded from the [build inputs release](https://github.com/ShubhamJ010/gboard-clipboard-history/releases/tag/build-inputs). You can also drop the raw splits into `input/splits/` and they get merged with APKEditor. Override with `GBOARD_APK=<path>`. |
 | `input/patches-1.2.0.mpp` | PixelBoard patch bundle, downloaded from the [PixelBoard](https://github.com/Akshayykadam/PixelBoard) repository. |
-| `input/PixelBoard-v18.4.1-Stable-V7.apk` | Latest released PixelBoard APK, downloaded from the PixelBoard releases (used for the PoC script). |
+| `input/PixelBoard-18.4.1-V7.apk` | Latest released PixelBoard APK, downloaded from the PixelBoard releases (used for the PoC script). |
 
 Tooling is resolved automatically: Java 21+, `kotlinc`, `d8`, `android.jar`, `APKEditor.jar` and
 the Morphe patcher jar (downloaded from the PixelBoard repository when the sibling checkout is
